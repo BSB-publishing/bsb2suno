@@ -4,23 +4,37 @@ Suno lyrics from the **Berean Standard Bible**. The lyric words are the BSB's ow
 lines break, who sings them, and whether the chapter is sung or told come from the Hebrew and Greek
 text, through bcv-commons data.
 
+See [`examples/`](examples/) for what it makes (RUT 1, PSA 23, PSA 136, EXO 15, LUK 1).
+
 ```
-python3 -m bsb2suno RUT 1            # one chapter → output/RUT/RUT_001.suno.txt + .json
+make setup                           # once: install, download the pinned data, build the cast table
+python3 -m bsb2suno RUT 1            # one chapter → output/RUT/RUT_001.lyrics.txt, .notes.txt, .json
 python3 -m bsb2suno PSA 23 136       # several
 python3 -m bsb2suno JON all          # a whole book
-make examples                        # RUT 1, PSA 23, PSA 136, EXO 15, LUK 1
-make test
-make cast                            # rebuild config/cast.csv from the data (keeps manual rows)
+make examples                        # rebuild examples/
+make test                            # also checks that examples/ is current
+make cast                            # rebuild the generated cast table
+make cuts                            # where long chapters can be cut (output/cut-points.txt)
 ```
 
-Needs Python ≥ 3.11 and `pyarrow` (`pip install -e .`; the tool reads `config/` from the repository,
-so install it editable). The first run downloads its inputs into `cache/` (git-ignored, about 100 MB)
-at the revisions pinned in [`pins.json`](pins.json). The tests download too.
+Needs Python ≥ 3.11 and `pyarrow`. `make setup` runs `pip install -e .` (editable, because the tool reads
+`config/` from the repository) and downloads every input into `cache/` (git-ignored, about 100 MB) at
+the revisions pinned in [`pins.json`](pins.json): the bcv-commons datasets on Hugging Face, and the BSB
+text itself, the USJ release of [BSB-publishing/bsb2usfm](https://github.com/BSB-publishing/bsb2usfm/releases)
+(one zip, checked by sha256): about 540 small files, fetched 8 at a time, which takes some minutes.
+Without `make setup`, the first run downloads what it needs.
 
-For the BSB, clone [BSB-publishing/bsb2usfm](https://github.com/BSB-publishing/bsb2usfm) next to this
-repository. Its USJ footnotes are used to cut the footnote text helloAO merged into 135 verses
-(`footnotes_usj_dir` in `pins.json`). Without it, those verses keep the stray text and their chapters fall
-back to verse-end line breaks (a warning names them).
+## What is in the repository, and what is generated
+
+| | Where | In git |
+|---|---|---|
+| Code, tests, `Makefile`, `pins.json` | `bsb2suno/`, `scripts/`, `tests/` | yes |
+| Settings, and every hand decision | `config/` | yes |
+| A few example chapters | `examples/` (rebuilt by `make examples`; the tests fail if stale) | yes |
+| Downloads; the generated cast table | `cache/` (`make setup`) | no |
+| Lyrics, styles, notes; a copy of the cast table to browse | `output/` (every run) | no |
+
+Nothing in `output/` is edited: it is rebuilt on every run. Every change goes in `config/`.
 
 ## What it reads, per chapter
 
@@ -29,7 +43,7 @@ back to verse-end line breaks (a warning names them).
 | Structure | `bcv-commons/hebrew-clause-lines` v0.2 (Tanakh), `bcv-commons/greek-nt-clause-lines` v0.2 (NT) | line breaks, paragraph ends, quotations and speakers |
 | Setting and forms | `bcv-commons/passage-facts` v0.2 | song / poetic lines / prose; refrains, acrostics, couplet halves, psalm headings |
 | Stanza breaks | `bcv-commons/clause-connectives` v0.1, `bcv-commons/clause-columns` v1.2 | where a long stanza is split |
-| Lyric text | BSB from bible.helloao.org, the route `bcv-commons/bibles` gives for BSB; read with the vendored `tools/verse-text` 2.0.0 | the words |
+| Lyric text | the BSB's own release (BSB-publishing/bsb2usfm, `BSB_usj.zip`, pinned by tag and sha256); read with the vendored `tools/verse-text` 2.0.0 | the words |
 | The join | `bcv-commons/full-alignments-manual` v1.1, layer `eng_BSB+manual+bsb-tables` | which BSB token each Hebrew/Greek word (MACULA key) is rendered by |
 
 The join uses the **full** BSB alignment, the publisher's own interlinear tables. It links every source
@@ -70,7 +84,7 @@ Three forms of the Hebrew text (passage-facts v0.2) add line starts, through the
 
 **Stanzas.** A stanza ends at the line holding the end of a clause line with `para_end` (Leningrad) or
 `para_end_mam`. In an acrostic whose letters cover several verses (Psalm 119, Lamentations 3), each new letter
-starts a stanza; the comment block names it (`119:9-12 · ב Beth`). A stanza over 12 lines (`stanzas.max_lines`)
+starts a stanza; the notes file names it (`119:9-12 · ב Beth`). A stanza over 12 lines (`stanzas.max_lines`)
 is split at verse starts, where the Hebrew/Greek most clearly starts something new. The signals come from the
 clause that opens the verse:
 
@@ -92,21 +106,20 @@ BSB.
 `group`, `female_group` or `divine`. Outside quotes it is the narrator, the persona's lead. Each class
 becomes a tag that names a kind of voice, such as `[Female Vocal]`, `[Choir]` or `[Deep Male Vocal]`. A
 tag never names a person, because Suno doesn't know who Naomi is. Who each tag stands for is listed in
-the comment block (`# Voices: [Female Vocal] Naomi, Ruth; [Female Choir] two daughters-in-law, the women`).
+the notes file (`Voices: [Female Vocal] Naomi, Ruth; [Female Choir] two daughters-in-law, the women`).
 
 - **Where tags go.** A tag is written where the voice changes. `[Lead Vocal]` marks the return to the
   narrator.
 - **Nested quotes.** A quote inside a speech (Eve quoting God, GEN 3:3) is sung by the outer speaker.
-- **Where the classes come from.** The classes are in [`config/cast.csv`](config/cast.csv), keyed by
-  the clause lines' `speaker_id`, which is the same in every edition and language. See
-  [Configuration](#configuration).
+- **Where the classes come from.** The cast table, keyed by the clause lines' `speaker_id`, which is the
+  same in every edition and language. See [Configuration](#configuration).
 
 **Setting.** If passage facts set ≥ half the chapter as song (`fm.ms.song`, `qt.song`), the setting is
 **song**. If song and poetic lines (`fm.ms.lines`, `fm.ed.*`, `fm.tr.poetry`) together reach half, it is
 **poetry** (sung verses). Otherwise it is **prose** (narrative ballad). The setting only shapes the
 sections; the style line comes from the book's profile, so a book sounds the same in every chapter.
 
-**Sections.** Each stanza is a `[Verse n]`: a song verse, not a Bible verse (the comment block gives its
+**Sections.** Each stanza is a `[Verse n]`: a song verse, not a Bible verse (the notes file gives its
 verse range). In a prose chapter, a stanza the facts set as song or poetry is a `[Bridge]` (Ruth's vow, the
 Magnificat). A line the Hebrew/Greek repeats in its chapter (`fm.tx.refrain`) is a `[Chorus]`, e.g.
 "And there was evening, and there was morning" in Genesis 1, in every edition alike. Where the refrain comes
@@ -114,7 +127,7 @@ back inside one stanza (Psalm 136), the stanza stays whole as call and response:
 `layout.toml` sets the chorus source (the text's refrains, or the edition's repeated lines), its style, and
 which section tags are written (all, only `[Chorus]`/`[Bridge]`, or none).
 
-**Writing.** Nothing is shortened, paraphrased or added. The comment block gives each section's verse
+**Writing.** Nothing is shortened, paraphrased or added. The notes file gives each section's verse
 range, the superscription and the psalm-heading terms (`fm.ps.*`: for the leader, the instruments, the
 tune), the selahs and any one-letter-per-verse acrostic (all noted, not sung), the credits, and a warning when the lyrics run past
 `--max-chars` (default 5000), so you know to shorten them. Any shortening done later should be listed
@@ -128,13 +141,17 @@ keyed so that it carries over to other books, editions and languages.
 
 | File | Edit with | Keyed by | Holds |
 |---|---|---|---|
-| [`profiles.toml`](config/profiles.toml) | any text editor | profile name | style line, Suno persona names (`persona.female` / `persona.male`), the tag for each voice type |
-| [`books.toml`](config/books.toml) | any text editor | book, optionally edition | profile and lead (`female` / `male`) per book; per edition `style_suffix` (e.g. `, sung in Spanish`), its own personas or tags |
-| [`cast.csv`](config/cast.csv) | Excel, LibreOffice, Google Sheets | `speaker_id` (source data) | voice of each of the 1,448 speakers |
+| [`books/<BOOK>.toml`](config/books/) | any text editor | book, chapter | a book's profile, lead singer and (optional) own style line; a chapter's mood or style (`[chapters.23]`). Books without a file use `_default.toml` |
+| [`profiles.toml`](config/profiles.toml) | any text editor | profile name | style line, Suno persona names (`persona.female` / `persona.male`), the tag for each voice type, the words each mood adds |
+| [`cast.csv`](config/cast.csv) | Excel, LibreOffice, Google Sheets | `speaker_id` (source data) | the speakers whose voice or name is set by hand |
 | [`cast-rules.toml`](config/cast-rules.toml) | any text editor | none | the rules that give speakers their voice |
 | [`layout.toml`](config/layout.toml) | any text editor | none | the defaults: text (word counting, line-start punctuation), setting codes, lines, stanzas, section tags, chorus, psalm marks, length limits |
+| [`moods.toml`](config/moods.toml) | any text editor | none | which cue (psalm heading, song in narrative, speech delivery) gives a chapter which mood |
 | [`editions.toml`](config/editions.toml) | any text editor | edition | the edition's text fixes, style suffix, own song choices and personas, and any layout setting |
 | [`languages.toml`](config/languages.toml) | any text editor | ISO 639-3 code | the edition language's words for trimming speaker names and spotting groups; the Hebrew letter names |
+
+Every output file says which setting made it: a chapter's notes file ends its style line with
+"To change: config/books/PSA.toml, [chapters.23]".
 
 A layout setting is looked up in three layers, and the later one wins:
 
@@ -149,25 +166,19 @@ A mistake in a file (a misspelt profile, an unknown voice or fix, a broken line)
 the row or book, and what is allowed.
 
 **Profiles.** A profile is chosen per book, never per chapter. In Suno, save one persona per profile
-and lead, then type its name into `profiles.toml` (`persona.female = "My Country F"`). The comment
-block shows which persona to select. `--profile` / `--lead` override a book for one run.
+and lead, then type its name into `profiles.toml` (`persona.female = "My Country F"`). The notes
+file shows which persona to select. `--profile` / `--lead` override a book for one run.
 
-**Cast.** `cast.csv` has one row per speaker:
+**Cast.** The full cast table is generated from the data: one row per speaker (1,448), with its
+`voice`, the rule that set it (`basis`), a `name`, the Hebrew/Greek word naming it (`source`), how many
+`words` it speaks, its `books`, and the edition's own name for it (`label_BSB`). It is built into
+`cache/` by `make setup`, and again by itself whenever the pins or the rules change; each run writes a
+copy to `output/cast.csv` to browse.
 
-| Column | What it holds |
-|---|---|
-| `voice` | one of `narrator`, `female`, `male`, `group`, `female_group`, `divine` |
-| `basis` | which rule set the voice |
-| `name` | the speaker's name |
-| `source` | the Hebrew/Greek word naming them |
-| `words` | how many words they speak |
-| `books` | the books they speak in |
-| `label_BSB` | the edition's own name for them |
-| `note` | free text |
-
-To change a speaker, set `voice` and type `manual` in `basis`; [`make cast`](scripts/build_cast.py)
-rebuilds the other rows from the data and never changes manual ones. Six are seeded that way, e.g. Wisdom in
-Proverbs is female. Save the file as CSV (UTF-8).
+Hand decisions go in [`config/cast.csv`](config/cast.csv), with four columns: `speaker_id`, `voice`
+(`narrator`, `female`, `male`, `group`, `female_group`, `divine`), `name` and `note`. Find the speaker's id
+in `output/cast.csv`, add a row, save as CSV (UTF-8). Seven rows are there now, e.g. Wisdom in Proverbs is
+female. A row here always wins over the rules, and `make cast` reports when the rules change a voice.
 
 The rules in `cast-rules.toml` read Hebrew/Greek words, not English:
 
@@ -182,38 +193,70 @@ The rules in `cast-rules.toml` read Hebrew/Greek words, not English:
   woman's name (רוּת, Μαρία ...);
 - **male:** otherwise.
 
-`make cast` also reads the edition's names for plural speakers ("the Levites", "the women"), using
+The build also reads the edition's names for plural speakers ("the Levites", "the women"), using
 `languages.toml`. It then stores the result by speaker, so another edition inherits it.
 
 ## Output
 
-`output/<BOOK>/<BOOK>_<CCC>.suno.txt`: the style line, the `#` comment block, then the lyrics (paste
-the part after the comment block into Suno). `.json` has the same lyrics with every line's verse, BSB
-token, quotation id, speaker (id, label, voice class) and clause segment. It also holds the profile
-(name, lead, persona, style, tags), the text fingerprint, the alignment file and the pins.
+For each chapter, in `output/<BOOK>/`:
 
-`scripts/cut_points.py [--limit N] [BOOK ...]` lists where each chapter over N characters
-(`length.cut_limit`, 4000) can be cut at its section markers into parts under N. It prefers acrostic
-letters, then source paragraph ends.
+| File | What it is | In Suno |
+|---|---|---|
+| `<BOOK>_<CCC>.lyrics.txt` | the lyrics, with section and voice tags | paste whole into **Lyrics** |
+| `<BOOK>.style.txt` | the book's style line, the same for every chapter | paste into **Style of Music** |
+| `<BOOK>_<CCC>.style.txt` | only where the chapter has its own style (see below); use it instead | paste into **Style of Music** |
+| `<BOOK>_<CCC>.notes.txt` | the persona to pick, the voices (tag → speakers), the sections and their verses, psalm headings, selah, acrostic letters, length warnings, which style file applies and why, and the credits | not pasted |
+| `<BOOK>.notes.txt` | which chapters of the book have their own style, and why | not pasted |
+| `<BOOK>_<CCC>.json` | the same lyrics with every line's verse, BSB token, quotation, speaker (id, label, voice class) and clause segment; the profile, style and mood, the text fingerprint, the alignment file and the pins | |
 
-## Fixes to the helloAO text
+**Chapter styles.** A book keeps one style. A chapter gets its own only where the Hebrew/Greek says how
+it sounds; that is 45 chapters of the BSB. Its style is then the book's style plus a few words for the
+mood. Three cues are used:
 
-The text is checked against the fingerprints the alignments were built on. Three helloAO problems are
-repaired before reading. Each is a narrow, data-checked fix in `bsb2suno/edition.py`, switched on per
-edition in `editions.toml` (`fixes`):
+- **A psalm heading** that names the kind of piece: תְּפִלָּה a prayer (17, 86, 90, 102, 142, HAB 3),
+  תְּהִלָּה praise (145), לְתוֹדָה thanksgiving (100), שִׁיר יְדִידֹת a love song (45), the sabbath (92); and הַלְלוּ יָהּ
+  in the text (praise, 15 psalms). The instruments a heading names (בִּנְגִינוֹת strings, הַנְּחִילוֹת flutes)
+  are added too.
+- **A song in narrative**: the Masoretic song layout over most of a chapter in a book that is not song
+  (EXO 15, DEU 32, JDG 5, 2SA 22, 1CH 16).
+- **Delivery**: speech delivered one way (passage-facts `delivery`) covers at least 40% of the
+  chapter: a lament (EZK 19, 27, 32), a prayer (1KI 8, NEH 9, JON 2), anger (MAT 23).
 
-- Psalm superscriptions now come inside verse 1 (`"descriptive": true`). They are read as titles, as
-  before. This applies to PSA only.
-- 135 footnotes are merged into words-of-Jesus text ("house2:49 Or I had to be about…"). They are cut by
-  exact match against the BSB's own footnotes, read from the sibling repo `../bsb2usfm` (configurable
-  in `pins.json`; a warning names any verse that cannot be cut).
-- A stray `vvv` table marker in GEN 35:18.
+The general heading terms (a psalm, a song, a maskil) and the grammar of a psalm were tested as cues and
+are not used: they do not tell a lament from praise reliably. Psalm types from scholarship (lament, trust,
+wisdom …) are proposed to bcv-commons, to be read here once published.
 
-With these, 1,182 of 1,189 chapters match the aligned text.
+`config/moods.toml` says which cue gives which mood. `config/profiles.toml` (`[moods]`,
+`[instruments]`, and per profile) says which words each mood adds; `""` turns a mood off.
+
+## The text and its repairs
+
+The text is the BSB's published USJ (bsb2usfm release v5.20). It is checked against the fingerprints
+the alignments were built on. Three narrow repairs, in `bsb2suno/edition.py` and switched on per edition
+in `editions.toml` (`fixes`), make it read as the aligned text does:
+
+- `titles-in-d`: a psalm title paragraph (`\d`) holds the verse-1 marker (`\d \v 1 A Psalm of David`).
+  The title is read as a title, not as verse 1. PSA only.
+- `note-spaces`: the USJ export drops the space between a footnote and a following `\add` word
+  (USFM `punishment\f …\f* \add is\add*` reads "punishmentis"), 144 places. The space is put back.
+  Reported to bsb2usfm; the repair goes once a fixed release is pinned.
+- `span-spaces`: some `\add` spans end in a space before punctuation (`\add his role \add*.`), 187
+  places. That space is dropped.
+
+With these, 65 of 66 books have exactly the aligned words, and 1,177 of 1,189 chapters match the
+alignment. The 12 others fall back to verse-end line breaks (their notes file says so):
+
+- EXO 26, NUM 25, JER 22, HAB 3, ACT 22, 2TI 1, JUD 1, whose aligned text differs from the BSB;
+- SNG 1, 5, 6, 7, 8: the aligned text has the speaker labels ("The Friends", "The Bride") as verse words.
+  The release has them as headings, which is right, so they are not sung.
+
+The text used to come from bible.helloao.org. The release is the BSB's own text: it has the BSB's brackets
+("[The sons of Aram:]") and none of helloAO's stray spaces ("Nevertheless , David") or footnotes merged
+into verses.
 
 ## Licences
 
-Code: MIT (see [`LICENSE`](LICENSE)). `config/cast.csv` and the other files built from bcv-commons data:
-CC BY-SA 4.0. The vendored `vendor/verse_text/` is CC0 (bcv-commons/bibles). The lyric text is the BSB
+Code and settings: MIT (see [`LICENSE`](LICENSE)). The generated cast table, `examples/` and the lyric
+sheets, built from bcv-commons data: CC BY-SA 4.0. The vendored `vendor/verse_text/` is CC0 (bcv-commons/bibles). The lyric text is the BSB
 (public domain). The line and voice structure comes from CC BY-SA 4.0 data, so
 credit bcv-commons when you publish lyric sheets. See [ATTRIBUTION.md](ATTRIBUTION.md).

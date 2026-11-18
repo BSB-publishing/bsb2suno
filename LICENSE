@@ -5,8 +5,8 @@ This repository holds three kinds of content under different licences.
 ## 1. Software - MIT License
 
 The Python code (`bsb2suno/`, `scripts/`, `tests/`), the `Makefile` and the hand-written settings in
-`config/` (`profiles.toml`, `books.toml`, `editions.toml`, `layout.toml`, `languages.toml`) are licensed
-under the MIT License:
+`config/` (`books/`, `profiles.toml`, `moods.toml`, `editions.toml`, `layout.toml`, `languages.toml`,
+`cast.csv`) are licensed under the MIT License:
 
 ```
 MIT License
@@ -34,14 +34,14 @@ SOFTWARE.
 
 ## 2. Data derived from bcv-commons - CC BY-SA 4.0
 
-`config/cast.csv` (the speakers, their source words and voice types), the Hebrew and Greek word lists
-and in `config/cast-rules.toml` are built from bcv-commons datasets under
-CC BY-SA 4.0 (see [ATTRIBUTION.md](ATTRIBUTION.md)). They are shared under the same licence,
-[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Credit: bcv-commons; MACULA (Clear
-Bible / Biblica, CC BY 4.0).
+The Hebrew and Greek word lists in `config/cast-rules.toml`, and the example lyric sheets in
+`examples/`, are built from bcv-commons datasets under CC BY-SA 4.0 (see [ATTRIBUTION.md](ATTRIBUTION.md)).
+They are shared under the same licence, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+Credit: bcv-commons; MACULA (Clear Bible / Biblica, CC BY 4.0).
 
-The lyric sheets the tool writes (`output/`, not in this repository) combine the public-domain BSB text
-with this structure, so they carry the same CC BY-SA 4.0 credit; each sheet's comment block holds it.
+What the tool generates (the cast table in `cache/`, the lyric sheets in `output/`, neither in this
+repository) combines the public-domain BSB text with this structure, so it carries the same CC BY-SA 4.0
+credit; each sheet's notes file holds it.
 
 ## 3. Vendored code - CC0
 

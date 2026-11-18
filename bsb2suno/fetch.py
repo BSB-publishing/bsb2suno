@@ -6,8 +6,13 @@ modules for that.
 """
 from __future__ import annotations
 
+import hashlib
+import http.client
 import json
+import os
+import threading
 import time
+import zipfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -37,7 +42,7 @@ def _get(url: str, dest: Path, retries: int = 6) -> Path:
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 data = r.read()
-            tmp = dest.with_suffix(dest.suffix + ".part")
+            tmp = dest.with_suffix(f"{dest.suffix}.{os.getpid()}-{threading.get_ident()}.part")   # safe in parallel
             tmp.write_bytes(data)
             tmp.replace(dest)
             return dest
@@ -46,7 +51,7 @@ def _get(url: str, dest: Path, retries: int = 6) -> Path:
                 raise NotFound(url) from None
             if attempt == retries - 1:
                 raise
-        except (urllib.error.URLError, TimeoutError):
+        except (OSError, http.client.HTTPException):    # URLError, timeouts, connection resets, short reads
             if attempt == retries - 1:
                 raise
         time.sleep(min(60, 3 * 2 ** attempt))
@@ -65,15 +70,25 @@ def hf_json(dataset: str, path: str):
     return json.loads(hf(dataset, path).read_text(encoding="utf-8"))
 
 
-def helloao_chapter(translation: str, book: str, chapter: int) -> dict:
-    """helloAO's chapter JSON. helloAO has no revisions; the text fingerprint of the
-    book (checked against the alignment file name) is what pins the text."""
-    url = f"https://bible.helloao.org/api/{translation}/{book}/{chapter}.json"
-    p = _get(url, CACHE / "helloao" / translation / book / f"{chapter}.json")
-    return json.loads(p.read_text(encoding="utf-8"))
-
-
-def helloao_books(translation: str) -> dict:
-    url = f"https://bible.helloao.org/api/{translation}/books.json"
-    p = _get(url, CACHE / "helloao" / translation / "books.json")
-    return {b["id"]: b for b in json.loads(p.read_text(encoding="utf-8"))["books"]}
+def release_dir(name: str) -> Path:
+    """A pinned GitHub release asset (key of pins.json "releases"), a zip checked against its
+    sha256 and unpacked into cache/. Returns the folder it was unpacked into."""
+    pin = pins()["releases"][name]
+    base = CACHE / "releases" / name / pin["tag"]
+    done = base / ".unpacked"
+    if done.exists():
+        return base
+    url = f"https://github.com/{pin['repo']}/releases/download/{pin['tag']}/{pin['asset']}"
+    z = _get(url, base.parent / f"{pin['tag']}-{pin['asset']}")
+    digest = hashlib.sha256(z.read_bytes()).hexdigest()
+    if digest != pin["sha256"]:
+        z.unlink()
+        raise RuntimeError(f"{url}: sha256 {digest} is not the pinned {pin['sha256']} (pins.json releases.{name}); "
+                           "the release asset was replaced, check it and update the pin")
+    with zipfile.ZipFile(z) as zf:
+        for m in zf.namelist():          # only plain files directly or below base, no absolute or ../ paths
+            if m.startswith("/") or ".." in Path(m).parts:
+                raise RuntimeError(f"{url}: unsafe path in zip: {m}")
+        zf.extractall(base)
+    done.write_text(pin["sha256"], encoding="utf-8")
+    return base

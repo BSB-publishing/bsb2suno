@@ -23,6 +23,30 @@ divine       = "[Deep Male Vocal]"   # God speaking
 refrain      = "[Choir]"             # a line the chapter repeats (Psalm 136)
 
 
+# Chapter moods (see moods.toml): words added to the book's style line for a chapter whose
+# Hebrew/Greek gives it a mood. Keep the genre and instruments of the profile; change only tempo
+# and colour. "" = no own style for that mood. A profile can change any of them in its own
+# [profiles.xxx.moods] block.
+[moods]
+prayer       = "slower, intimate, prayerful"
+lament       = "slower, minor key, sparse, sorrowful"
+praise       = "uplifting, joyful, fuller sound"
+thanksgiving = "warm, grateful, uplifting"
+love_song    = "tender, romantic"
+sabbath      = "peaceful, restful"
+song         = "triumphant, anthemic, full choir"
+anger        = "intense, urgent"
+# not given by the source cues yet; for chapters set by hand (books/<BOOK>.toml) and later psalm types
+trust        = "calm, steady, confident"
+wisdom       = "thoughtful, measured"
+royal        = "stately, majestic"
+
+# Instruments a psalm heading names; added to the style line of that psalm.
+[instruments]
+strings = "with harp and strings"
+flutes  = "with flutes"
+
+
 [profiles.folk]
 style = "acoustic folk ballad, 90 BPM, fingerpicked guitar, soft strings, storytelling, earnest"
 persona.female = ""

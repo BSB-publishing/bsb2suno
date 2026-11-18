@@ -61,7 +61,7 @@ edition_paragraph_weight = 0
 
 # Acrostics (Psalm 119, Lamentations ...): a new stanza starts at each new letter of the alphabet
 # when the letter covers at least this many verses or lines (Psalm 119: 8 verses per letter).
-# Acrostics with a new letter on every verse are only noted in the comment block.
+# Acrostics with a new letter on every verse are only noted in the notes file.
 acrostic_min_run = 2
 
 
@@ -100,7 +100,7 @@ lines_min_words = 3
 
 [psalms]
 # List the psalm heading's terms (for the leader, the instruments, the tune ...) and the selahs
-# in the comment block. They are never sung.
+# in the notes file. They are never sung.
 heading_terms = true
 
 # A tag put on its own line after a line holding "Selah", e.g. "[Instrumental Break]".
@@ -109,7 +109,7 @@ selah_tag = ""
 
 
 [length]
-# Warn in the comment block when the lyrics are longer than this many characters.
+# Warn in the notes file when the lyrics are longer than this many characters.
 max_chars = 5000
 
 # scripts/cut_points.py: cut long chapters into parts under this many characters.

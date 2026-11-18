@@ -143,6 +143,6 @@ def voice_of(sid: str | None, info: SpeakerInfo | None) -> str:
 
 
 def cast_name(sid: str | None) -> str | None:
-    """The cast table's readable name for a speaker (for the comment block), if it has one."""
+    """The cast table's readable name for a speaker (for the notes file), if it has one."""
     entry = cast_table().get(sid or "")
     return (entry.get("name") or None) if entry else None

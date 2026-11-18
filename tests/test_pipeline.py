@@ -4,7 +4,8 @@ import sys
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 from bsb2suno import align, cast, config, edition, lines, profiles, structure  # noqa: E402
 from bsb2suno.__main__ import apply_layout_defaults, build_chapter  # noqa: E402
@@ -67,11 +68,11 @@ class TestRuth(unittest.TestCase):
         self.assertIn("[Female Choir]", tags)    # the two daughters-in-law (1:10), the women (1:19)
         self.assertIn("[Bridge]", tags)          # Ruth 1:16-17, set as poetry
         self.assertFalse(any("Naomi" in t or "Ruth" in t for t in tags))   # tags never name a person
-        self.assertIn("Naomi", self.res["full"].split("\n\n")[1])         # names are in the comment block
+        self.assertIn("Naomi", self.res["notes"])         # names are in the comment block
 
     def test_profile_is_the_books(self):
         prof = profiles.for_book("BSB", "RUT")
-        self.assertTrue(self.res["full"].startswith(prof.style + "\n"))
+        self.assertEqual(self.res["style"], prof.style)
         self.assertEqual(self.res["data"]["profile"]["name"], prof.name)
 
     def test_reordered_clauses_get_own_lines(self):
@@ -130,12 +131,12 @@ class TestTextForms(unittest.TestCase):
         starts = [s["verses"][0] for s in res["data"]["sections"] if any(ln["acrostic"] for ln in s["lines"])]
         self.assertEqual(len(starts), 22)
         self.assertEqual(starts[:3], ["119:1", "119:9", "119:17"])
-        self.assertIn("ב Beth", res["full"])
+        self.assertIn("ב Beth", res["notes"])
 
     def test_heading_terms_and_selah_noted(self):
         _, _, res = build("PSA", 3)
-        self.assertIn("Heading terms (not sung): a psalm", res["full"])
-        self.assertIn("Selah at 3:2, 3:4, 3:8", res["full"])
+        self.assertIn("Heading terms (not sung): a psalm", res["notes"])
+        self.assertIn("Selah at 3:2, 3:4, 3:8", res["notes"])
 
     def test_half_b_starts_a_line(self):
         _, _, res = build("PSA", 23)
@@ -149,6 +150,50 @@ class TestTextForms(unittest.TestCase):
         self.assertIsNone(render.section_tag("Verse 3", "chorus_bridge"))
         self.assertEqual(render.section_tag("Chorus", "chorus_bridge"), "[Chorus]")
         self.assertIsNone(render.section_tag("Chorus", "none"))
+
+
+class TestMoods(unittest.TestCase):
+    def moods_of(self, book):
+        from bsb2suno import align, moods
+        vmap = align.verse_map("BSB")
+        return moods.book_moods(book, structure.passage_facts(book), structure.clause_lines(book, set(range(200))),
+                                lambda cv: align.spine_to_edition(vmap, book, cv), config.layout("BSB"))
+
+    def test_heading_moods(self):
+        m = self.moods_of("PSA")
+        self.assertEqual(m[17].mood, "prayer")          # תְּפִלָּה
+        self.assertEqual(m[150].mood, "praise")         # הַלְלוּ יָהּ
+        self.assertEqual(m[4].instruments, ("strings",))
+        self.assertNotIn(23, m)                         # no cue: the book's style
+
+    def test_song_in_narrative(self):
+        self.assertEqual(self.moods_of("EXO")[15].mood, "song")
+        self.assertNotIn(12, self.moods_of("JOS"))      # a list of kings in song layout
+
+    def test_style_files(self):
+        from bsb2suno import moods
+        prof = profiles.for_book("BSB", "PSA")
+        style, added = moods.chapter_style(prof, self.moods_of("PSA")[17])
+        self.assertTrue(style.startswith(prof.base_style + ", ") and added)
+        self.assertEqual(moods.chapter_style(prof, None), (prof.style, None))
+
+
+class TestExamples(unittest.TestCase):
+    def test_examples_current(self):
+        """examples/ is what the code and config build now (make examples to refresh it)."""
+        import contextlib
+        import io
+        import tempfile
+        from bsb2suno.__main__ import main
+        ex = ROOT / "examples"
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            for b, c in (("RUT", 1), ("PSA", 23), ("PSA", 136), ("EXO", 15), ("LUK", 1)):
+                main([b, str(c), "--out", tmp, "--bare"])
+            got = {p.relative_to(tmp): p.read_bytes() for p in Path(tmp).rglob("*") if p.is_file()}
+        want = {p.relative_to(ex): p.read_bytes() for p in ex.rglob("*") if p.is_file()}
+        self.assertEqual(sorted(got), sorted(want), "files differ: run make examples")
+        stale = [str(k) for k in got if got[k] != want[k]]
+        self.assertEqual(stale, [], "examples/ is out of date: run make examples")
 
 
 class TestConfig(unittest.TestCase):
@@ -173,7 +218,7 @@ class TestPsalm(unittest.TestCase):
         self.assertEqual(al.kind, "full")
         self.assertEqual(res["data"]["setting"], "poetry")
         self.assertTrue(res["lyrics"].split("\n")[1].startswith("The LORD is my shepherd"))
-        self.assertIn("A Psalm of David.", res["full"])   # in the comment block
+        self.assertIn("A Psalm of David.", res["notes"])   # in the comment block
 
 
 if __name__ == "__main__":

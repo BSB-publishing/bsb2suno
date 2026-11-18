@@ -40,7 +40,7 @@ def count_units(text: str, mode: str = "words") -> int:
 @dataclass
 class Speaker:
     id: str | None
-    label: str | None          # the edition's own words for the speaker's name (comment block only)
+    label: str | None          # the edition's own words for the speaker's name (notes file only)
     voice: str                 # voice class from config/cast.csv
 
 

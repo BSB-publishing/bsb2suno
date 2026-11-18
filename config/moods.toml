@@ -1,0 +1,41 @@
+# Chapter moods: which cue in the Hebrew/Greek gives a chapter its own mood.
+#
+# A book keeps its one style (books.toml / profiles.toml). Only where the source says how a
+# chapter sounds does it get its own style: the book's style plus a few words for the mood.
+# Those words are set per profile in profiles.toml ([moods] and [instruments]).
+#
+# The cues (fixed in the code, because they are read from the Hebrew/Greek):
+#   heading   a psalm heading naming the kind of piece: תְּפִלָּה prayer, תְּהִלָּה praise, לְתוֹדָה
+#             thanksgiving, שִׁיר יְדִידֹת love_song, the sabbath; הַלְלוּ יָהּ in the text (praise);
+#             and the instruments named: בִּנְגִינוֹת strings, הַנְּחִילוֹת flutes
+#   song      a song in narrative (the Masoretic song layout over most of a chapter, in a book
+#             that is not song): EXO 15, DEU 32, JDG 5, 2SA 22, 1CH 16
+#   delivery  most of a chapter is speech delivered one way (see [delivery])
+#
+# Moods: prayer, praise, thanksgiving, love_song, sabbath, song, and the groups in [delivery.groups].
+# A chapter's mood can also be set by hand in books/<BOOK>.toml ([chapters.N] mood = ...).
+
+
+# When a chapter has several cues, the first mood in this list wins.
+priority = ["song", "prayer", "lament", "thanksgiving", "praise", "love_song", "sabbath", "anger",
+            "trust", "wisdom", "royal"]
+
+
+[song]
+# Chapters set in song layout that are lists, not songs (the kings of Canaan, the sons of Haman).
+not_songs = ["JOS 12", "EST 9"]
+
+
+[delivery]
+# A chapter gets the mood when speech delivered that way covers at least this share of its verses.
+min_share = 0.4
+
+# Which delivery notes (the labels in passage-facts codes.tsv, "dl.*") make up each mood.
+# A delivery not listed here gives no mood.
+[delivery.groups]
+lament = ["lament", "lamenting", "weeping", "mourning", "sad", "wailing", "crying", "distraught",
+          "deeply distressed", "calling out in anguish", "weeping, pleading"]
+prayer = ["praying", "pleading", "begging", "entreating", "interceding"]
+praise = ["praising", "singing", "rejoicing", "joyfully singing", "worshiping God", "praising Jesus",
+          "call to worship"]
+anger  = ["angry", "rebuking", "accusing", "furious", "threatening", "scolding", "indignant", "outraged"]

@@ -9,16 +9,16 @@
 
 [BSB]
 
-# Repairs to the text as the source delivers it, before it is read. Each one is narrow and is
-# checked against the text the alignment was built on (see bsb2suno/edition.py):
-#   "descriptive-titles"  a superscription given inside verse 1 ({"descriptive": true}) is read
-#                         as a title, in the books listed in descriptive_title_books
-#   "table-markers"       drop the "vvv" marker of the BSB translation tables (GEN 35:18)
-#   "leaked-footnotes"    cut footnote text that was merged into the verse text, by exact match
-#                         against the edition's own footnotes (pins.json footnotes_usj_dir)
-fixes = ["descriptive-titles", "table-markers", "leaked-footnotes"]
-# Only the Psalms: ZEC 12:1 is flagged the same way but is verse text in the BSB.
-descriptive_title_books = ["PSA"]
+# Repairs to the text as the release delivers it, before it is read. Each one is narrow and is
+# checked by the alignment's fingerprints (see bsb2suno/edition.py):
+#   "titles-in-d"   a psalm title paragraph (\d) that holds the verse-1 marker is read as a title,
+#                   not as verse text, in the books listed in title_books
+#   "note-spaces"   put back the space the USJ export drops between a footnote and a following
+#                   \add word ("punishmentis"; reported to bsb2usfm, 2026-11-18)
+#   "span-spaces"   drop the space inside an \add span before punctuation ("\add his role \add*."
+#                   would read "role .")
+fixes = ["titles-in-d", "note-spaces", "span-spaces"]
+title_books = ["PSA"]
 
 # Added to the end of every style line, e.g. ", sung in Spanish".
 style_suffix = ""

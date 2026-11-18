@@ -59,6 +59,37 @@ def layout(edition_name: str | None = None) -> dict:
     return out
 
 
+BOOK_KEYS = {"profile", "lead", "style", "chapters"}
+CHAPTER_KEYS = {"mood", "style"}
+
+
+@lru_cache(maxsize=None)
+def book(code: str) -> dict:
+    """config/books/<BOOK>.toml, laid over config/books/_default.toml."""
+    out = dict(toml("books/_default.toml"))
+    path = CONFIG / "books" / f"{code}.toml"
+    if path.exists():
+        own = toml(f"books/{code}.toml")
+        bad = sorted(set(own) - BOOK_KEYS)
+        if bad:
+            raise ConfigError(f"config/books/{code}.toml: unknown setting(s) {', '.join(bad)}; "
+                              f"allowed: {', '.join(sorted(BOOK_KEYS))} and [chapters.N] blocks")
+        for n, ch in (own.get("chapters") or {}).items():
+            if not str(n).isdigit() or not isinstance(ch, dict):
+                raise ConfigError(f"config/books/{code}.toml: [chapters.{n}]: use the chapter number, e.g. [chapters.23]")
+            bad = sorted(set(ch) - CHAPTER_KEYS)
+            if bad:
+                raise ConfigError(f"config/books/{code}.toml [chapters.{n}]: unknown setting(s) {', '.join(bad)}; "
+                                  f"allowed: {', '.join(sorted(CHAPTER_KEYS))}")
+        out.update(own)
+    return out
+
+
+def chapter(code: str, n: int) -> dict:
+    """The [chapters.N] block of config/books/<BOOK>.toml ({} if none)."""
+    return (book(code).get("chapters") or {}).get(str(n), {})
+
+
 def cast_rules() -> dict:
     return toml("cast-rules.toml")
 
@@ -67,13 +98,14 @@ def language(iso: str) -> dict:
     return toml("languages.toml").get(iso, {})
 
 
-@lru_cache(maxsize=None)
-def cast_table() -> dict[str, dict]:
-    """speaker_id -> row of config/cast.csv (an empty dict if the file is not there yet)."""
-    path = CONFIG / CAST_FILE
-    if not path.exists():
-        return {}
+CAST_GENERATED = CONFIG.parent / "cache" / "cast" / "cast.csv"     # built from the data (bsb2suno.castbuild)
+OVERRIDE_COLUMNS = ["speaker_id", "voice", "name", "note"]
+
+
+def _read_csv(path: Path, label: str) -> dict[str, dict]:
     out: dict[str, dict] = {}
+    if not path.exists():
+        return out
     with path.open(encoding="utf-8-sig", newline="") as f:       # -sig: the BOM Excel writes
         for n, row in enumerate(csv.DictReader(f), start=2):
             sid = (row.get("speaker_id") or "").strip()
@@ -81,7 +113,7 @@ def cast_table() -> dict[str, dict]:
                 continue
             voice = (row.get("voice") or "").strip()
             if voice and voice not in VOICES:
-                raise ConfigError(f"config/{CAST_FILE} row {n} ({sid}, {row.get('name')}): voice {voice!r} "
+                raise ConfigError(f"{label} row {n} ({sid}, {row.get('name')}): voice {voice!r} "
                                   f"is not one of {', '.join(VOICES)}")
             row = {k: (v or "").strip() for k, v in row.items() if k}
             row["voice"] = voice
@@ -89,10 +121,30 @@ def cast_table() -> dict[str, dict]:
     return out
 
 
-def write_cast(rows: list[dict], editions: list[str]) -> Path:
-    """Write config/cast.csv (UTF-8 with BOM, so Excel shows Hebrew and Greek correctly)."""
+def cast_overrides() -> dict[str, dict]:
+    """config/cast.csv: the hand decisions (speaker_id, voice, name, note), nothing else."""
+    return _read_csv(CONFIG / CAST_FILE, f"config/{CAST_FILE}")
+
+
+@lru_cache(maxsize=None)
+def cast_table() -> dict[str, dict]:
+    """speaker_id -> row: the generated table (cache/cast/cast.csv) with config/cast.csv laid over
+    it. A row set by hand gets basis "manual". Empty if the table is not built yet."""
+    out = _read_csv(CAST_GENERATED, "cache/cast/cast.csv")
+    for sid, o in cast_overrides().items():
+        row = dict(out.get(sid, {"speaker_id": sid}))
+        for k in ("voice", "name", "note"):
+            if o.get(k):
+                row[k] = o[k]
+        row["basis"] = "manual"
+        out[sid] = row
+    return out
+
+
+def write_cast(rows: list[dict], editions: list[str], path: Path = CAST_GENERATED) -> Path:
+    """Write a cast table (UTF-8 with BOM, so Excel shows Hebrew and Greek correctly)."""
     cols = CAST_COLUMNS + [f"label_{e}" for e in editions] + ["note"]
-    path = CONFIG / CAST_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
         w.writeheader()

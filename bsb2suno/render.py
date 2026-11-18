@@ -1,9 +1,9 @@
-"""Suno lyrics: one style line, a comment block, then sections with voice tags.
+"""Suno lyrics: sections with voice tags, and the notes that go with them.
 
 The style line and the voice tags come from the book's profile (config/profiles.toml,
 config/books.toml), so every chapter of a book sounds alike. A voice tag names a kind of voice
 (config/cast.csv gives each speaker's class), never a person; who each tag stands for is
-listed in the comment block.
+listed in the notes file.
 
 Every lyric line is the edition's own text, verbatim. Nothing is shortened, paraphrased or
 added here. A later writing step that shortens must list what it changed in the comment
@@ -141,12 +141,13 @@ def section_tag(label: str, mode: str = "all", number_verses: bool = True) -> st
 def render(book_name: str, chapter: int, edition_name: str, setting: str, secs: list[Section],
            credits: list[str], profile: Profile, style: str | None = None, max_chars: int = 5000,
            extra_notes: list[str] | None = None, names=None, layout: dict | None = None,
-           letter_names: dict[str, str] | None = None) -> tuple[str, str]:
-    """(full text with style line and comment block, lyrics only).
+           letter_names: dict[str, str] | None = None, style_note: str | None = None) -> tuple[str, str]:
+    """(the notes, the lyrics). The notes go in their own file; the lyrics are what is pasted
+    into Suno's Lyrics box, and the style line (its own file) into the Style of Music box.
 
     A tag is written where the voice changes: to another speaker, or back to the narrator
     (the persona's lead). The lyrics open without a tag when the narrator starts.
-    ``names(speaker) -> str`` gives the readable name listed in the comment block."""
+    ``names(speaker) -> str`` gives the readable name listed in the notes file."""
     layout = layout or {}
     sec_cfg = layout.get("sections", {})
     mode, numbered = sec_cfg.get("tags", "all"), sec_cfg.get("number_verses", True)
@@ -185,6 +186,8 @@ def render(book_name: str, chapter: int, edition_name: str, setting: str, secs: 
     notes = [f"{book_name} {chapter} · {edition_name} · setting: {setting}",
              f"Profile: {profile.name}, {profile.lead} lead · Suno persona: "
              + (profile.persona or f"(not set: profiles.toml [profiles.{profile.name}] persona.{profile.lead})")]
+    if style_note:
+        notes.append(style_note)
     if cast_used:
         notes.append("Voices: " + "; ".join(f"{t} {', '.join(w)}" for t, w in cast_used.items())
                      + f"; {tags.get('narrator')} or no tag = the narrator (the persona)")
@@ -199,8 +202,4 @@ def render(book_name: str, chapter: int, edition_name: str, setting: str, secs: 
     if len(lyrics) > max_chars:
         notes.append(f"Length: {len(lyrics)} characters, over {max_chars}; shorten before use and list the cuts here.")
     notes.extend(credits)
-    comment = "\n".join(f"# {n}" for n in notes)
-
-    style_line = style or profile.style
-    full = f"{style_line}\n\n{comment}\n\n{lyrics}"
-    return full, lyrics
+    return "\n".join(notes) + "\n", lyrics

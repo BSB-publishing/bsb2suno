@@ -1,8 +1,8 @@
 """The lyric-language text: one edition, verse by verse, read the shared bcv-commons way.
 
-Text comes from helloAO (the route ``catalog/e/eng/text-route.json`` gives for BSB), is
-converted to USJ and extracted with the vendored ``tools/verse-text`` package, so the verse
-text, its tokens and the book fingerprint are exactly those the alignments were built on.
+Text comes from the edition's pinned USJ release (for the BSB: BSB-publishing/bsb2usfm) and is
+extracted with the vendored ``tools/verse-text`` package, so the verse text, its tokens and the
+book fingerprint are those the alignments were built on (checked by the fingerprints).
 """
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "vendor" / "verse_text"))
 
 from bcv_tokenize import file_hash, fingerprints, strip_marks, tokenize  # noqa: E402
-from helloao_to_usj import merge_book_usj  # noqa: E402
 from verse_text import extract_usj, first_number  # noqa: E402
 
 from . import config, fetch  # noqa: E402
@@ -44,7 +43,7 @@ class BookText:
     paragraph_starts: set[tuple[int, int]] = field(default_factory=set)  # a prose paragraph opens at this verse
     heading_before: set[tuple[int, int]] = field(default_factory=set)    # a section heading stands before this verse
     poetry_verses: set[tuple[int, int]] = field(default_factory=set)     # the edition sets the verse in poetic lines
-    translation_meta: dict = field(default_factory=dict)
+    name: str = ""                                                        # the book's short name (\\toc2)
     titles: dict[tuple[int, int], str] = field(default_factory=dict)       # superscription before this verse
 
     @property
@@ -108,116 +107,102 @@ def _walk_layout(usj: dict, book: BookText) -> None:
             pending_heading = False
 
 
-def lift_descriptive(chapter_json: dict, book: str, books: tuple[str, ...] = ("PSA",)) -> tuple[dict, dict[int, str]]:
-    """helloAO now gives a psalm superscription inside verse 1 as ``{"text", "descriptive": true}``.
-    verse-text 2.0.0 does not know that flag and would read the title as verse text, which
-    changes the fingerprint (BSB PSA: e0860a31 instead of the aligned c867de4b). Move each such
-    piece out to a ``hebrew_subtitle`` item before its verse, which the converter reads as
-    ``\\d``, a title. Only in ``books`` (editions.toml descriptive_title_books; BSB: the Psalms):
-    ZEC 12:1's oracle heading is also flagged ``descriptive`` by helloAO but is verse text in BSB.
-    Returns the fixed chapter and {verse: superscription}."""
-    ch = chapter_json["chapter"]
-    if book not in books:
-        return chapter_json, {}
-    content, titles = [], {}
-    for item in ch.get("content", []):
-        if isinstance(item, dict) and item.get("type") == "verse":
-            desc = [x for x in item.get("content", []) if isinstance(x, dict) and x.get("descriptive")]
-            if desc:
-                titles[int(item["number"])] = " ".join(x["text"] for x in desc)
-                content.append({"type": "hebrew_subtitle", "content": [x["text"] for x in desc]})
-                item = {**item, "content": [x for x in item["content"] if x not in desc]}
-        content.append(item)
-    return {**chapter_json, "chapter": {**ch, "content": content}}, titles
+BOOKS = ("GEN EXO LEV NUM DEU JOS JDG RUT 1SA 2SA 1KI 2KI 1CH 2CH EZR NEH EST JOB PSA PRO ECC SNG ISA JER "
+         "LAM EZK DAN HOS JOL AMO OBA JON MIC NAM HAB ZEP HAG ZEC MAL MAT MRK LUK JHN ACT ROM 1CO 2CO GAL EPH "
+         "PHP COL 1TH 2TH 1TI 2TI TIT PHM HEB JAS 1PE 2PE 1JN 2JN 3JN JUD REV").split()
 
 
-LEAK = re.compile(r"(?<=[^\s\d])(\d{1,3}):(\d{1,3}) ")
-LINK_TARGET = re.compile(r"\|[1-4A-Z][A-Z0-9]{2} \d+:\d+(?:[-–]\d+(?::\d+)?)?")
+def books(edition: str) -> list[str]:
+    """The edition's books, in canonical order (those its release has a USJ file for)."""
+    d = fetch.release_dir(fetch.pins()["editions"][edition]["text"])
+    have = {p.stem for p in d.glob("*.usj")}
+    return [b for b in BOOKS if b in have]
+
+
+def _is(n, kind: str) -> bool:
+    return isinstance(n, dict) and n.get("type") == kind
+
+
+def lift_titles(usj: dict) -> dict[tuple[int, int], str]:
+    """A psalm title is a ``\\d`` paragraph that holds the verse-1 marker (``\\d \\v 1 A Psalm of
+    David``). The aligned text has the title outside verse 1, so the title's text stays in the
+    ``d`` paragraph (a heading, not sung) and the verse marker moves to the next paragraph with
+    content. Returns {(chapter, verse): title}."""
+    titles: dict[tuple[int, int], str] = {}
+    cont = usj["content"]
+    chapter = 0
+    for i, p in enumerate(cont):
+        if _is(p, "chapter"):
+            chapter = int(p["number"])
+        if not (_is(p, "para") and p.get("marker") == "d"):
+            continue
+        vs = [x for x in p.get("content") or [] if _is(x, "verse")]
+        if not vs:
+            continue
+        title = " ".join(_usj_text(x) if isinstance(x, dict) else x for x in p["content"] if not _is(x, "verse")
+                         and not _is(x, "note")).split()
+        p["content"] = [x for x in p["content"] if not _is(x, "verse")]
+        for q in cont[i + 1:]:
+            if _is(q, "para") and q.get("content"):
+                q["content"] = vs + [" "] + q["content"]
+                break
+        titles[(chapter, int(first_number(vs[0]["number"])))] = " ".join(title)
+    return titles
+
+
+def restore_note_spaces(n) -> int:
+    """The bsb2usfm USJ export (v5.20) drops the space between a footnote (or a char span) and a
+    following char span: USFM ``punishment\\f …\\f* \\add is\\add*`` becomes "punishmentis".
+    Put the space back. Returns how many were restored."""
+    if not isinstance(n, dict) or not isinstance(n.get("content"), list) or n.get("type") == "note":
+        return 0
+    out: list = []
+    k = 0
+    for x in n["content"]:
+        if out and _is(x, "char") and isinstance(out[-1], dict) and out[-1].get("type") in ("note", "char"):
+            out.append(" ")
+            k += 1
+        out.append(x)
+    n["content"] = out
+    return k + sum(restore_note_spaces(x) for x in out)
+
+
+def trim_span_spaces(n) -> int:
+    """The BSB USFM has a space inside some \\add spans before punctuation (``\\add his role \\add*.``,
+    187 places), which reads as "role ." Drop that space when the text after the span starts with
+    punctuation. Returns how many were trimmed."""
+    if not isinstance(n, dict) or not isinstance(n.get("content"), list):
+        return 0
+    k = 0
+    c = n["content"]
+    for i, x in enumerate(c):
+        nxt = c[i + 1] if i + 1 < len(c) else None
+        if (_is(x, "char") and isinstance(nxt, str) and nxt[:1] and not nxt[0].isalnum() and not nxt[0].isspace()
+                and x.get("content") and isinstance(x["content"][-1], str) and x["content"][-1].endswith(" ")):
+            x["content"][-1] = x["content"][-1].rstrip()
+            k += 1
+    return k + sum(trim_span_spaces(x) for x in c)
 
 
 def _usj_text(n) -> str:
-    return n if isinstance(n, str) else "".join(_usj_text(c) for c in n.get("content", []) or [])
+    if isinstance(n, str):
+        return n
+    return "".join(_usj_text(c) for c in n.get("content", []) or [])
 
 
-def footnote_texts(usj_dir: Path, book: str) -> dict[tuple[int, int], list[str]]:
-    """{(chapter, verse): [footnote text as "C:V text"]} from a USJ book with footnotes."""
-    path = usj_dir / f"{book}.usj"
-    if not path.exists():
-        return {}
-    out: dict[tuple[int, int], list[str]] = {}
-    cv = [0, 0]
-
-    def walk(n) -> None:
-        if not isinstance(n, dict):
-            return
-        if n.get("type") == "chapter":
-            cv[0] = int(n["number"])
-        elif n.get("type") == "verse":
-            cv[1] = int(first_number(n["number"]))
-        elif n.get("type") == "note":
-            out.setdefault((cv[0], cv[1]), []).append(_usj_text(n))
-            return
-        for c in n.get("content", []) or []:
-            walk(c)
-
-    walk(json.loads(path.read_text(encoding="utf-8")))
-    return out
+def book_name(usj: dict, book: str) -> str:
+    """The book's short name, from ``\\toc2`` (or ``\\h``)."""
+    found = {p.get("marker"): _usj_text(p).strip() for p in usj["content"] if _is(p, "para")
+             and p.get("marker") in ("toc2", "h")}
+    return found.get("toc2") or found.get("h") or book
 
 
-def cut_leaked_footnotes(chapter_json: dict, notes: dict[tuple[int, int], list[str]]) -> tuple[dict, list[str]]:
-    """helloAO's BSB JSON (seen 2026-11-18) merges some footnotes into words-of-Jesus text runs,
-    as "...house2:49 Or I had to be about My Father’s business?”", and leaves ``footnotes`` empty:
-    135 verses in MAT, MRK, LUK, JHN, ACT, 1CO, HEB, REV. Cut each leaked note, matched exactly
-    against the edition's own footnotes (with helloAO's ``|BOOK C:V`` link targets dropped).
-    Returns the fixed chapter and the refs of leaks that could not be cut."""
-    ch = chapter_json["chapter"]
-    c = int(ch["number"])
-    unresolved: list[str] = []
-    content = []
-    for item in ch.get("content", []):
-        if isinstance(item, dict) and item.get("type") == "verse":
-            v = int(item["number"])
-            new = []
-            for x in item.get("content", []):
-                if isinstance(x, dict) and isinstance(x.get("text"), str) and any(
-                        (int(m.group(1)), int(m.group(2))) == (c, v) for m in LEAK.finditer(x["text"])):
-                    t = LINK_TARGET.sub("", x["text"])
-                    for n in notes.get((c, v), []):
-                        t = t.replace(n, "")
-                    if any((int(m.group(1)), int(m.group(2))) == (c, v) for m in LEAK.finditer(t)):
-                        unresolved.append(f"{c}:{v}")
-                    else:
-                        x = {**x, "text": t}
-                new.append(x)
-            item = {**item, "content": new}
-        content.append(item)
-    return {**chapter_json, "chapter": {**ch, "content": content}}, unresolved
-
-
-TABLE_MARKER = re.compile(r"\s+vvv(?=\s)")
-
-
-def drop_table_markers(chapter_json: dict) -> dict:
-    """helloAO's BSB has the BSB tables' joint-phrase marker ``vvv`` as a word in GEN 35:18
-    ("she named vvv him Ben-oni"); it is not text."""
-    ch = chapter_json["chapter"]
-
-    def fix(x):
-        if isinstance(x, str):
-            return TABLE_MARKER.sub("", x)
-        if isinstance(x, dict) and isinstance(x.get("text"), str):
-            return {**x, "text": TABLE_MARKER.sub("", x["text"])}
-        return x
-    content = [{**it, "content": [fix(x) for x in it["content"]]} if isinstance(it, dict) and it.get("type") == "verse"
-               else it for it in ch.get("content", [])]
-    return {**chapter_json, "chapter": {**ch, "content": content}}
-
-
-FIXES = ("descriptive-titles", "table-markers", "leaked-footnotes")
+FIXES = ("titles-in-d", "note-spaces", "span-spaces")
 
 
 def load_book(edition: str, book: str) -> BookText:
-    """The edition's text of a book, with the text fixes editions.toml lists for the edition."""
+    """The edition's text of a book, from its pinned USJ release (pins.json "releases"), with the
+    repairs editions.toml lists for the edition."""
     ed = fetch.pins()["editions"][edition]
     ecfg = config.edition(edition)
     fixes = ecfg.get("fixes", [])
@@ -225,34 +210,23 @@ def load_book(edition: str, book: str) -> BookText:
     if unknown:
         raise config.ConfigError(f"config/editions.toml [{edition}]: unknown fix(es) {', '.join(unknown)}; "
                                  f"known: {', '.join(FIXES)}")
-    meta = fetch.helloao_books(ed["helloao_id"])[book]
-    notes_dir = ed.get("footnotes_usj_dir") if "leaked-footnotes" in fixes else None
-    notes = footnote_texts((fetch.ROOT / notes_dir).resolve(), book) if notes_dir else {}
-    title_books = tuple(ecfg.get("descriptive_title_books", []))
-    chapters, titles, leaks = [], {}, []
-    for c in range(meta["firstChapterNumber"], meta["lastChapterNumber"] + 1):
-        fixed = fetch.helloao_chapter(ed["helloao_id"], book, c)
-        t: dict[int, str] = {}
-        if "descriptive-titles" in fixes:
-            fixed, t = lift_descriptive(fixed, book, title_books)
-        if "table-markers" in fixes:
-            fixed = drop_table_markers(fixed)
-        bad: list[str] = []
-        if "leaked-footnotes" in fixes:
-            fixed, bad = cut_leaked_footnotes(fixed, notes)
-        chapters.append(fixed)
-        leaks.extend(bad)
-        titles.update({(c, v): s for v, s in t.items()})
-    if leaks:
-        print(f"warning: {book}: footnote text leaked into verse text, not cut (no matching footnote"
-              f"{'' if notes else '; footnotes_usj_dir not found'}): {', '.join(leaks)}", file=sys.stderr)
-    usj = merge_book_usj(book, chapters)
+    path = fetch.release_dir(ed["text"]) / f"{book}.usj"
+    if not path.exists():
+        raise config.ConfigError(f"{edition} has no book {book} (no {path.name} in release {ed['text']})")
+    usj = json.loads(path.read_text(encoding="utf-8"))
+    titles: dict[tuple[int, int], str] = {}
+    if "note-spaces" in fixes:
+        restore_note_spaces(usj)
+    if "span-spaces" in fixes:
+        trim_span_spaces(usj)
+    if "titles-in-d" in fixes and book in ecfg.get("title_books", []):
+        titles = lift_titles(usj)
     verses: dict[tuple[int, int], Verse] = {}
     for ch, vs in extract_usj(usj).items():
         for v in vs:
             key = (int(ch), int(v["verse"]))
             verses[key] = Verse(key[0], key[1], v["text"], tokenize(v["text"]), token_spans(v["text"]))
     fp, ch_fps = fingerprints({k: v.text for k, v in verses.items()})
-    bt = BookText(edition, book, verses, fp, ch_fps, translation_meta=chapters[0].get("translation", {}), titles=titles)
+    bt = BookText(edition, book, verses, fp, ch_fps, name=book_name(usj, book), titles=titles)
     _walk_layout(usj, bt)
     return bt

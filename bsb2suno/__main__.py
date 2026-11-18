@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import __version__, align, cast, config, edition, fetch, lines, profiles, render, structure, textforms
+from . import __version__, align, cast, castbuild, config, edition, fetch, lines, moods, profiles, render, structure, textforms
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -48,7 +48,7 @@ def chapter_credits(book: str, chapter: int, ed: str, al: align.Alignment) -> li
 
 def build_chapter(book: str, chapter: int, ed: str, bt: edition.BookText, al: align.Alignment,
                   rows: list[dict], speakers: dict, facts: list[dict], vmap: dict, args,
-                  profile: profiles.Profile | None = None) -> dict:
+                  profile: profiles.Profile | None = None, mood: moods.Mood | None = None) -> dict:
     profile = profile or profiles.for_book(ed, book, getattr(args, "profile", None), getattr(args, "lead", None))
     layout = config.layout(ed)
     to_ed = lambda cv: align.spine_to_edition(vmap, book, cv)  # noqa: E731
@@ -87,16 +87,30 @@ def build_chapter(book: str, chapter: int, ed: str, bt: edition.BookText, al: al
         notes.append("Acrostic (each unit starts with the next letter): " + ", ".join(
             f"{c}:{v} {x}" for ((c, v), _), x in marks.letters))
 
-    book_name = bt.translation_meta.get("shortName", ed)
-    names = fetch.helloao_books(fetch.pins()["editions"][ed]["helloao_id"])
-    full, lyrics = render.render(names[book]["commonName"], chapter, f"{book_name}", setting, secs,
+    if args.style:
+        style, added = args.style, None
+    else:
+        style, added = moods.chapter_style(profile, mood)
+    stem = f"{book}_{chapter:03d}"
+    style_note = (f"Style: this chapter's own ({stem}.style.txt): {mood.mood or 'instruments'} (+ \"{added}\"), "
+                  f"from {mood.basis}: {mood.evidence}" if added and mood else
+                  f"Style: the book's ({book}.style.txt, profile {profile.name})"
+                  + (f"; the source names {mood.evidence}, which sets no style in profile {profile.name}" if mood else ""))
+    style_note += f". To change: config/books/{book}.toml, [chapters.{chapter}] (mood or style)"
+    if args.style:
+        style_note = "Style: given on the command line (--style)"
+
+    notes_text, lyrics = render.render(bt.name, chapter, ed, setting, secs,
                                  chapter_credits(book, chapter, ed, al), profile, style=args.style,
                                  max_chars=args.max_chars, names=lambda sp: sp.label or cast.cast_name(sp.id),
-                                 extra_notes=notes, layout=layout, letter_names=letter_names)
+                                 extra_notes=notes, layout=layout, letter_names=letter_names, style_note=style_note)
     data = {
         "book": book, "chapter": chapter, "edition": ed, "setting": setting,
         "profile": {"name": profile.name, "lead": profile.lead, "persona": profile.persona,
-                    "style": args.style or profile.style, "tags": profile.tags},
+                    "style": profile.style, "tags": profile.tags},
+        "style": style, "own_style": bool(added) or bool(args.style),
+        "mood": ({"mood": mood.mood, "basis": mood.basis, "evidence": mood.evidence,
+                  "instruments": list(mood.instruments)} if mood else None),
         "text_fingerprint": bt.fingerprint,
         "superscription": next((t for (c, _), t in sorted(bt.titles.items()) if c == chapter), None), "alignment": {"kind": al.kind, "layer": al.layer, "file": al.file},
         "pins": fetch.pins()["huggingface"], "bsb2suno": __version__,
@@ -112,7 +126,8 @@ def build_chapter(book: str, chapter: int, ed: str, bt: edition.BookText, al: al
             "starts": s.kind,
         } for s in secs],
     }
-    return {"full": full, "lyrics": lyrics, "data": data}
+    return {"notes": notes_text, "lyrics": lyrics, "style": style, "own_style": bool(added) or bool(args.style),
+            "data": data}
 
 
 def apply_layout_defaults(args) -> None:
@@ -138,10 +153,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-words", type=int, help="join lines shorter than this (layout.toml lines.min_words)")
     ap.add_argument("--max-chars", type=int, help="flag lyrics longer than this (layout.toml length.max_chars)")
     ap.add_argument("--print", action="store_true", help="also print the result")
+    ap.add_argument("--bare", action="store_true", help="write only the book and chapter files (no cast.csv, "
+                                                        "README.txt), e.g. for examples/")
     args = ap.parse_args(argv)
     apply_layout_defaults(args)
 
     book = args.book.upper()
+    castbuild.ensure(args.edition)
     bt = edition.load_book(args.edition, book)
     al = align.load(args.edition, book, bt.file_hash, bt.chapter_fingerprints)
     if al.kind != "full" or al.chapters_off:
@@ -155,18 +173,64 @@ def main(argv: list[str] | None = None) -> int:
     vmap = align.verse_map(args.edition)
 
     chapters = sorted({c for c, _ in bt.verses}) if args.chapters == ["all"] else [int(c) for c in args.chapters]
+    to_ed = lambda cv: align.spine_to_edition(vmap, book, cv)  # noqa: E731
+    book_moods = moods.apply_overrides(book, moods.book_moods(book, facts, rows, to_ed, config.layout(args.edition)),
+                                       profile)
     out_dir = Path(args.out) / book
     out_dir.mkdir(parents=True, exist_ok=True)
+    write_book_files(out_dir, book, profile, book_moods, args)
+    if not args.bare:
+        castbuild.write_browse(Path(args.out))
+        write_readme(Path(args.out))
     for c in chapters:
-        res = build_chapter(book, c, args.edition, bt, al, rows, speakers, facts, vmap, args, profile)
+        res = build_chapter(book, c, args.edition, bt, al, rows, speakers, facts, vmap, args, profile, book_moods.get(c))
         stem = out_dir / f"{book}_{c:03d}"
-        stem.with_suffix(".suno.txt").write_text(res["full"], encoding="utf-8")
-        stem.with_suffix(".json").write_text(json.dumps(res["data"], ensure_ascii=False, indent=1), encoding="utf-8")
-        print(f"{stem.with_suffix('.suno.txt')}  ({res['data']['setting']}, {profile.name}/{profile.lead}, "
-              f"{len(res['lyrics'])} chars)")
+        own = Path(f"{stem}.style.txt")
+        if res["own_style"]:
+            own.write_text(res["style"] + "\n", encoding="utf-8")
+        elif own.exists():
+            own.unlink()                     # left from an earlier run with other settings
+        for old in (Path(f"{stem}.suno.txt"),):  # the one-file layout of earlier versions
+            if old.exists():
+                old.unlink()
+        Path(f"{stem}.lyrics.txt").write_text(res["lyrics"], encoding="utf-8")
+        Path(f"{stem}.notes.txt").write_text(res["notes"], encoding="utf-8")
+        Path(f"{stem}.json").write_text(json.dumps(res["data"], ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"{stem}.lyrics.txt  ({res['data']['setting']}, {profile.name}/{profile.lead}, "
+              f"{'own style' if res['own_style'] else 'book style'}, {len(res['lyrics'])} chars)")
         if args.print:
-            print(res["full"])
+            print(res["style"], "", res["lyrics"], sep="\n")
     return 0
+
+
+def write_readme(out: Path) -> None:
+    (out / "README.txt").write_text(
+        "This folder is rebuilt by bsb2suno: anything changed here is lost on the next run.\n\n"
+        "To change the songs, edit the settings instead:\n"
+        "  config/books/<BOOK>.toml   a book's profile and lead singer; a chapter's mood or style\n"
+        "  config/profiles.toml       what each profile and each mood sounds like; the voice tags\n"
+        "  config/cast.csv            a speaker's voice or name (look the speaker up in cast.csv here)\n"
+        "  config/layout.toml         lines, stanzas, section tags, chorus, length\n\n"
+        "Per chapter: paste <BOOK>_<CCC>.lyrics.txt into Suno's Lyrics box, and <BOOK>.style.txt\n"
+        "(or <BOOK>_<CCC>.style.txt where there is one) into the Style of Music box.\n"
+        "<BOOK>_<CCC>.notes.txt says which persona to pick and who sings what.\n", encoding="utf-8")
+
+
+def write_book_files(out_dir: Path, book: str, profile: profiles.Profile, book_moods: dict, args) -> None:
+    """<BOOK>.style.txt (the book's style line) and <BOOK>.notes.txt (which chapters have their own)."""
+    style = args.style or profile.style
+    (out_dir / f"{book}.style.txt").write_text(style + "\n", encoding="utf-8")
+    own = []
+    for c, m in sorted(book_moods.items()):
+        _, added = moods.chapter_style(profile, m)
+        if added and not args.style:
+            own.append(f"{book} {c}: {m.mood or 'instruments'} (+ \"{added}\"), from {m.basis}: {m.evidence}")
+    lines_out = [f"{book} · profile {profile.name}, {profile.lead} lead · settings: config/books/"
+                 f"{book + '.toml' if (config.CONFIG / 'books' / f'{book}.toml').exists() else '_default.toml'}",
+                 f"Style for every chapter: {book}.style.txt — except the chapters below, which have their own",
+                 f"<chapter>.style.txt (the same style with a mood the Hebrew/Greek gives the chapter).", ""]
+    lines_out += own or ["(no chapter of this book has its own style)"]
+    (out_dir / f"{book}.notes.txt").write_text("\n".join(lines_out) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

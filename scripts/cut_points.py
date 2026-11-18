@@ -23,7 +23,7 @@ LIMIT = a.limit or layout.get("length", {}).get("cut_limit", 4000)
 MIN_PART = 1200
 STRENGTH = {"acrostic": 4, "para": 3, "paragraph": 3, "split": 2, "chorus": 1, "midverse": 0}
 
-books = a.books or list(fetch.helloao_books("BSB"))
+books = a.books or edition.books("BSB")
 args = SimpleNamespace(edition="BSB", style=None, profile=None, lead=None, max_lines=None, min_words=None, max_chars=None)
 __import__("bsb2suno.__main__").__main__.apply_layout_defaults(args)
 

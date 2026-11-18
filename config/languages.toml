@@ -2,12 +2,12 @@
 # (the ISO 639-3 code of the edition in pins.json, e.g. eng, spa, fra).
 #
 # label_edge_words    words cut off the ends of a speaker's name as read from the text
-#                     ("But Naomi" -> "Naomi"). Names only appear in the comment block.
+#                     ("But Naomi" -> "Naomi"). Names only appear in the notes file.
 # label_group         words that show a speaker is a group ("the Levites", "his brothers")
 # label_female_group  words that show a group of women ("the women", "daughters")
 #
 # label_strip_endings endings cut off a speaker's name ("Naomi’s" -> "Naomi")
-# hebrew_letters      names of the Hebrew letters, for acrostics in the comment block (Psalm 119)
+# hebrew_letters      names of the Hebrew letters, for acrostics in the notes file (Psalm 119)
 # [<iso>.layout.*]    any setting of layout.toml, for every edition in this language, e.g.
 #                       [zho.layout.text]
 #                       count = "characters"

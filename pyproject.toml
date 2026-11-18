@@ -1,0 +1,14 @@
+[project]
+name = "bsb2suno"
+version = "0.1.0"
+description = "Suno lyrics from the Berean Standard Bible, with line breaks, voices and setting from bcv-commons clause lines and passage facts"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+dependencies = ["pyarrow>=14"]
+
+[project.scripts]
+bsb2suno = "bsb2suno.__main__:main"
+
+[tool.setuptools]
+packages = ["bsb2suno"]

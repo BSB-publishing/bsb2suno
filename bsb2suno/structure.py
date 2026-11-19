@@ -35,6 +35,40 @@ def passage_facts(book: str) -> list[dict]:
     return [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def macula_book(book: str) -> str:
+    """The two-digit MACULA book number of a USFM book code (GEN 01 … MAL 39, MAT 40 … REV 66)."""
+    from .edition import BOOKS
+    return f"{BOOKS.index(book) + 1:02d}"
+
+
+@lru_cache(maxsize=1)
+def _model_moods() -> list[dict]:
+    return pq.read_table(fetch.hf("passage-moods-model", "data/moods.parquet")).to_pylist()
+
+
+def model_moods(book: str) -> list[dict]:
+    """passage-moods-model rows of a book: a passage, and the feeling families a model read in its
+    words (strongest first). Model output, no human check."""
+    return [r for r in _model_moods() if r["book"] == book]
+
+
+COMMENTARY_DATASETS = ("hebrew-commentary-terms", "hebrew-commentary-terms-model")
+
+
+@lru_cache(maxsize=2)
+def _statements(dataset: str) -> list[dict]:
+    t = pq.read_table(fetch.hf(dataset, "data/statements.parquet"))
+    return [dict(r, dataset=dataset) for r in t.to_pylist()]
+
+
+def commentary_statements(book: str, says: str | None = None) -> list[dict]:
+    """The classical commentators' statements on a book (by rule, and read by a model), each with
+    the ``dataset`` it comes from."""
+    b = macula_book(book)
+    return [r for ds in COMMENTARY_DATASETS for r in _statements(ds)
+            if r["subject_first"][:2] == b and (says is None or r["says"] == says)]
+
+
 def key_cv(key: str) -> tuple[int, int]:
     """Spine (chapter, verse) of a MACULA key (Hebrew 12 digits, Greek 11: BBCCCVVV...)."""
     return int(key[2:5]), int(key[5:8])
@@ -56,6 +90,8 @@ def setting_verses(facts: list[dict], spine_verses: list[tuple[int, int]],
     poetic: set[tuple[int, int]] = set()
     for f in facts:
         v = f.get("value")
+        if f.get("layout") == "list":      # song layout for a list (JOS 12, EST 9), not a song
+            continue
         if (f["kind"] == "form" and v in song_forms) or (f["kind"] == "quote" and v in song_quotes):
             song.update(fact_verses(f, spine_verses))
         elif f["kind"] == "form" and v in poetic_forms:

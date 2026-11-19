@@ -57,7 +57,9 @@ def prefetch(edition_name: str = "BSB", books: list[str] | None = None, workers:
     """Download the pinned files of all books several at a time (a first setup is ~540 files;
     one by one that takes many minutes). Files already in cache/ are not fetched again."""
     books = books or edition.books(edition_name)        # also unpacks the text release, once
-    shared = [("passage-facts", "codes.tsv")] + [(d, f"data/{t}.parquet") for d in structure.CLAUSE_SIGNAL_DATASETS
+    shared = [("passage-facts", "codes.tsv"), ("passage-facts", "sources.tsv"),
+              ("passage-moods-model", "data/moods.parquet")] + [
+             (d, "data/statements.parquet") for d in structure.COMMENTARY_DATASETS] + [(d, f"data/{t}.parquet") for d in structure.CLAUSE_SIGNAL_DATASETS
                                                   for t in ("hebrew", "greek-nt")]
     align.verse_map(edition_name)
     with ThreadPoolExecutor(workers) as pool:

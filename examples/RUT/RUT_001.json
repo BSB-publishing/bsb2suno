@@ -55,8 +55,8 @@
   },
   "passage-facts": {
    "repo": "bcv-commons/passage-facts",
-   "tag": "v0.2",
-   "revision": "6bb402053fc1f69472ac6a51524f06c39e2ffffb",
+   "tag": "v0.3.3",
+   "revision": "7e147a06b0cccf0b6e544912834a8da8f6d8ffbc",
    "licence": "CC BY-SA 4.0"
   },
   "full-alignments-manual": {
@@ -77,6 +77,24 @@
    "revision": "96d0a2295d1729c589ac6df67b56d0e88e4defe8",
    "licence": "CC0 1.0",
    "_use": "_fingerprints.txt: the aligned text's chapter fingerprints"
+  },
+  "passage-moods-model": {
+   "repo": "bcv-commons/passage-moods-model",
+   "tag": "v0.1",
+   "revision": "db4ad9173bee9371a983aa105fa1f647e9a6d24a",
+   "licence": "CC BY-SA 4.0 (model output, claude-opus-5-5, no human check)"
+  },
+  "hebrew-commentary-terms": {
+   "repo": "bcv-commons/hebrew-commentary-terms",
+   "tag": "v0.1",
+   "revision": "797e20cd29c97abaeceb7ba6bbd47272153ddc21",
+   "licence": "CC BY-SA 4.0"
+  },
+  "hebrew-commentary-terms-model": {
+   "repo": "bcv-commons/hebrew-commentary-terms-model",
+   "tag": "v0.1",
+   "revision": "965909b57f77b1001a6f3bf34c25231a93c63b3d",
+   "licence": "CC BY-SA 4.0 (model output, claude-opus-5-5, no human check)"
   }
  },
  "bsb2suno": "0.1.0",
@@ -84,6 +102,7 @@
   {
    "label": "Verse 1",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:1"
    ],
@@ -160,6 +179,7 @@
   {
    "label": "Verse 2",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:2",
     "1:3",
@@ -304,6 +324,7 @@
   {
    "label": "Verse 3",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:5",
     "1:6",
@@ -448,6 +469,7 @@
   {
    "label": "Verse 4",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:8",
     "1:9",
@@ -594,6 +616,7 @@
   {
    "label": "Verse 5",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:11",
     "1:12"
@@ -781,6 +804,7 @@
   {
    "label": "Verse 6",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:13",
     "1:14"
@@ -930,6 +954,7 @@
   {
    "label": "Verse 7",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:15",
     "1:16"
@@ -1113,6 +1138,7 @@
   {
    "label": "Bridge",
    "sung": true,
+   "mood": null,
    "verses": [
     "1:17"
    ],
@@ -1198,6 +1224,7 @@
   {
    "label": "Verse 8",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:18",
     "1:19"
@@ -1323,6 +1350,7 @@
   {
    "label": "Verse 9",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:20",
     "1:21"
@@ -1465,6 +1493,7 @@
   {
    "label": "Verse 10",
    "sung": false,
+   "mood": null,
    "verses": [
     "1:22"
    ],

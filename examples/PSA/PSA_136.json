@@ -18,9 +18,14 @@
    "refrain": "[Choir]"
   }
  },
- "style": "hymn, 72 BPM, piano and warm choir pads, reverent, contemplative",
- "own_style": false,
- "mood": null,
+ "style": "hymn, 72 BPM, piano and warm choir pads, reverent, contemplative, uplifting, joyful, fuller sound",
+ "own_style": true,
+ "mood": {
+  "mood": "praise",
+  "basis": "type",
+  "evidence": "Tyndale Open Study Notes: tehillah תְּהִלָּה over 26 of 26 verses; Hebrew commentators: Malbim (model-read): ההודאה",
+  "instruments": []
+ },
  "text_fingerprint": "c867de4b767d66eb71bf1c03510730abb8478c9baf43bb75d65380afb6fd86c0",
  "superscription": null,
  "alignment": {
@@ -55,8 +60,8 @@
   },
   "passage-facts": {
    "repo": "bcv-commons/passage-facts",
-   "tag": "v0.2",
-   "revision": "6bb402053fc1f69472ac6a51524f06c39e2ffffb",
+   "tag": "v0.3.3",
+   "revision": "7e147a06b0cccf0b6e544912834a8da8f6d8ffbc",
    "licence": "CC BY-SA 4.0"
   },
   "full-alignments-manual": {
@@ -77,6 +82,24 @@
    "revision": "96d0a2295d1729c589ac6df67b56d0e88e4defe8",
    "licence": "CC0 1.0",
    "_use": "_fingerprints.txt: the aligned text's chapter fingerprints"
+  },
+  "passage-moods-model": {
+   "repo": "bcv-commons/passage-moods-model",
+   "tag": "v0.1",
+   "revision": "db4ad9173bee9371a983aa105fa1f647e9a6d24a",
+   "licence": "CC BY-SA 4.0 (model output, claude-opus-5-5, no human check)"
+  },
+  "hebrew-commentary-terms": {
+   "repo": "bcv-commons/hebrew-commentary-terms",
+   "tag": "v0.1",
+   "revision": "797e20cd29c97abaeceb7ba6bbd47272153ddc21",
+   "licence": "CC BY-SA 4.0"
+  },
+  "hebrew-commentary-terms-model": {
+   "repo": "bcv-commons/hebrew-commentary-terms-model",
+   "tag": "v0.1",
+   "revision": "965909b57f77b1001a6f3bf34c25231a93c63b3d",
+   "licence": "CC BY-SA 4.0 (model output, claude-opus-5-5, no human check)"
   }
  },
  "bsb2suno": "0.1.0",
@@ -84,6 +107,7 @@
   {
    "label": "Verse 1",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:1",
     "136:2",
@@ -119,7 +143,7 @@
      "quote": null,
      "speaker": null,
      "segment": 3,
-     "refrain": "PSA.04766#1",
+     "refrain": "PSA.04834#1",
      "acrostic": null,
      "selah": false
     },
@@ -141,7 +165,7 @@
      "quote": null,
      "speaker": null,
      "segment": 5,
-     "refrain": "PSA.04766#2",
+     "refrain": "PSA.04834#2",
      "acrostic": null,
      "selah": false
     },
@@ -173,6 +197,7 @@
   {
    "label": "Verse 2",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:4",
     "136:5"
@@ -196,7 +221,7 @@
      "quote": null,
      "speaker": null,
      "segment": 9,
-     "refrain": "PSA.04766#3",
+     "refrain": "PSA.04834#3",
      "acrostic": null,
      "selah": false
     },
@@ -218,7 +243,7 @@
      "quote": null,
      "speaker": null,
      "segment": 11,
-     "refrain": "PSA.04766#4",
+     "refrain": "PSA.04834#4",
      "acrostic": null,
      "selah": false
     }
@@ -228,6 +253,7 @@
   {
    "label": "Verse 3",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:6",
     "136:7",
@@ -253,7 +279,7 @@
      "quote": null,
      "speaker": null,
      "segment": 13,
-     "refrain": "PSA.04766#5",
+     "refrain": "PSA.04834#5",
      "acrostic": null,
      "selah": false
     },
@@ -275,7 +301,7 @@
      "quote": null,
      "speaker": null,
      "segment": 15,
-     "refrain": "PSA.04766#6",
+     "refrain": "PSA.04834#6",
      "acrostic": null,
      "selah": false
     },
@@ -297,7 +323,7 @@
      "quote": null,
      "speaker": null,
      "segment": 17,
-     "refrain": "PSA.04766#7",
+     "refrain": "PSA.04834#7",
      "acrostic": null,
      "selah": false
     },
@@ -319,7 +345,7 @@
      "quote": null,
      "speaker": null,
      "segment": 19,
-     "refrain": "PSA.04766#8",
+     "refrain": "PSA.04834#8",
      "acrostic": null,
      "selah": false
     }
@@ -329,6 +355,7 @@
   {
    "label": "Verse 4",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:10",
     "136:11",
@@ -353,7 +380,7 @@
      "quote": null,
      "speaker": null,
      "segment": 21,
-     "refrain": "PSA.04766#9",
+     "refrain": "PSA.04834#9",
      "acrostic": null,
      "selah": false
     },
@@ -375,7 +402,7 @@
      "quote": null,
      "speaker": null,
      "segment": 23,
-     "refrain": "PSA.04766#10",
+     "refrain": "PSA.04834#10",
      "acrostic": null,
      "selah": false
     },
@@ -397,7 +424,7 @@
      "quote": null,
      "speaker": null,
      "segment": 25,
-     "refrain": "PSA.04766#11",
+     "refrain": "PSA.04834#11",
      "acrostic": null,
      "selah": false
     }
@@ -407,6 +434,7 @@
   {
    "label": "Verse 5",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:13",
     "136:14",
@@ -431,7 +459,7 @@
      "quote": null,
      "speaker": null,
      "segment": 27,
-     "refrain": "PSA.04766#12",
+     "refrain": "PSA.04834#12",
      "acrostic": null,
      "selah": false
     },
@@ -453,7 +481,7 @@
      "quote": null,
      "speaker": null,
      "segment": 29,
-     "refrain": "PSA.04766#13",
+     "refrain": "PSA.04834#13",
      "acrostic": null,
      "selah": false
     },
@@ -475,7 +503,7 @@
      "quote": null,
      "speaker": null,
      "segment": 31,
-     "refrain": "PSA.04766#14",
+     "refrain": "PSA.04834#14",
      "acrostic": null,
      "selah": false
     }
@@ -485,6 +513,7 @@
   {
    "label": "Verse 6",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:16",
     "136:17",
@@ -509,7 +538,7 @@
      "quote": null,
      "speaker": null,
      "segment": 33,
-     "refrain": "PSA.04766#15",
+     "refrain": "PSA.04834#15",
      "acrostic": null,
      "selah": false
     },
@@ -531,7 +560,7 @@
      "quote": null,
      "speaker": null,
      "segment": 35,
-     "refrain": "PSA.04766#16",
+     "refrain": "PSA.04834#16",
      "acrostic": null,
      "selah": false
     },
@@ -553,7 +582,7 @@
      "quote": null,
      "speaker": null,
      "segment": 37,
-     "refrain": "PSA.04766#17",
+     "refrain": "PSA.04834#17",
      "acrostic": null,
      "selah": false
     }
@@ -563,6 +592,7 @@
   {
    "label": "Verse 7",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:19",
     "136:20",
@@ -588,7 +618,7 @@
      "quote": null,
      "speaker": null,
      "segment": 39,
-     "refrain": "PSA.04766#18",
+     "refrain": "PSA.04834#18",
      "acrostic": null,
      "selah": false
     },
@@ -610,7 +640,7 @@
      "quote": null,
      "speaker": null,
      "segment": 41,
-     "refrain": "PSA.04766#19",
+     "refrain": "PSA.04834#19",
      "acrostic": null,
      "selah": false
     },
@@ -632,7 +662,7 @@
      "quote": null,
      "speaker": null,
      "segment": 43,
-     "refrain": "PSA.04766#20",
+     "refrain": "PSA.04834#20",
      "acrostic": null,
      "selah": false
     },
@@ -654,7 +684,7 @@
      "quote": null,
      "speaker": null,
      "segment": 45,
-     "refrain": "PSA.04766#21",
+     "refrain": "PSA.04834#21",
      "acrostic": null,
      "selah": false
     }
@@ -664,6 +694,7 @@
   {
    "label": "Verse 8",
    "sung": true,
+   "mood": null,
    "verses": [
     "136:23",
     "136:24",
@@ -689,7 +720,7 @@
      "quote": null,
      "speaker": null,
      "segment": 47,
-     "refrain": "PSA.04766#22",
+     "refrain": "PSA.04834#22",
      "acrostic": null,
      "selah": false
     },
@@ -711,7 +742,7 @@
      "quote": null,
      "speaker": null,
      "segment": 49,
-     "refrain": "PSA.04766#23",
+     "refrain": "PSA.04834#23",
      "acrostic": null,
      "selah": false
     },
@@ -733,7 +764,7 @@
      "quote": null,
      "speaker": null,
      "segment": 51,
-     "refrain": "PSA.04766#24",
+     "refrain": "PSA.04834#24",
      "acrostic": null,
      "selah": false
     },
@@ -755,7 +786,7 @@
      "quote": null,
      "speaker": null,
      "segment": 53,
-     "refrain": "PSA.04766#25",
+     "refrain": "PSA.04834#25",
      "acrostic": null,
      "selah": false
     }

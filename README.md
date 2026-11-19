@@ -41,7 +41,7 @@ Nothing in `output/` is edited: it is rebuilt on every run. Every change goes in
 | Piece | Dataset (pinned in `pins.json`) | Used for |
 |---|---|---|
 | Structure | `bcv-commons/hebrew-clause-lines` v0.2 (Tanakh), `bcv-commons/greek-nt-clause-lines` v0.2 (NT) | line breaks, paragraph ends, quotations and speakers |
-| Setting and forms | `bcv-commons/passage-facts` v0.2 | song / poetic lines / prose; refrains, acrostics, couplet halves, psalm headings |
+| Setting and forms | `bcv-commons/passage-facts` v0.3.3 | song / poetic lines / prose; refrains, acrostics, couplet halves, psalm headings; psalm types and purposes, deliveries (chapter moods) |
 | Stanza breaks | `bcv-commons/clause-connectives` v0.1, `bcv-commons/clause-columns` v1.2 | where a long stanza is split |
 | Lyric text | the BSB's own release (BSB-publishing/bsb2usfm, `BSB_usj.zip`, pinned by tag and sha256); read with the vendored `tools/verse-text` 2.0.0 | the words |
 | The join | `bcv-commons/full-alignments-manual` v1.1, layer `eng_BSB+manual+bsb-tables` | which BSB token each Hebrew/Greek word (MACULA key) is rendered by |
@@ -76,7 +76,7 @@ to leave the land of Moab.
 A clause line with no aligned word adds no break, so it stays with the line before. A verse always starts
 a line. A line shorter than 3 words joins its neighbour in the same verse and voice (`lines.min_words`).
 
-Three forms of the Hebrew text (passage-facts v0.2) add line starts, through the alignment:
+Three forms of the Hebrew text (passage-facts) add line starts, through the alignment:
 - **Refrains:** each line the text repeats (`fm.tx.refrain`) is a line of its own.
 - **Acrostics:** a new acrostic letter (`fm.tx.acrostic`) starts a line.
 - **Couplet halves:** in Psalms, Proverbs and Job, a poetic verse also breaks where its second half starts
@@ -146,7 +146,7 @@ keyed so that it carries over to other books, editions and languages.
 | [`cast.csv`](config/cast.csv) | Excel, LibreOffice, Google Sheets | `speaker_id` (source data) | the speakers whose voice or name is set by hand |
 | [`cast-rules.toml`](config/cast-rules.toml) | any text editor | none | the rules that give speakers their voice |
 | [`layout.toml`](config/layout.toml) | any text editor | none | the defaults: text (word counting, line-start punctuation), setting codes, lines, stanzas, section tags, chorus, psalm marks, length limits |
-| [`moods.toml`](config/moods.toml) | any text editor | none | which cue (psalm heading, song in narrative, speech delivery) gives a chapter which mood |
+| [`moods.toml`](config/moods.toml) | any text editor | none | which cue (psalm heading, song in narrative, psalm type or purpose, the commentators, speech delivery) gives a chapter which mood; which Hebrew term gives which mood; moods inside a chapter |
 | [`editions.toml`](config/editions.toml) | any text editor | edition | the edition's text fixes, style suffix, own song choices and personas, and any layout setting |
 | [`languages.toml`](config/languages.toml) | any text editor | ISO 639-3 code | the edition language's words for trimming speaker names and spotting groups; the Hebrew letter names |
 
@@ -209,22 +209,47 @@ For each chapter, in `output/<BOOK>/`:
 | `<BOOK>.notes.txt` | which chapters of the book have their own style, and why | not pasted |
 | `<BOOK>_<CCC>.json` | the same lyrics with every line's verse, BSB token, quotation, speaker (id, label, voice class) and clause segment; the profile, style and mood, the text fingerprint, the alignment file and the pins | |
 
-**Chapter styles.** A book keeps one style. A chapter gets its own only where the Hebrew/Greek says how
-it sounds; that is 45 chapters of the BSB. Its style is then the book's style plus a few words for the
-mood. Three cues are used:
+**Chapter styles.** A book keeps one style. A chapter gets its own only where the Hebrew/Greek, or a
+scholarly reading of it, says how it sounds. Its style is then the book's style plus a few words for the
+mood. The cues, in the order they win when they disagree (`sources` in `config/moods.toml`):
 
 - **A psalm heading** that names the kind of piece: תְּפִלָּה a prayer (17, 86, 90, 102, 142, HAB 3),
-  תְּהִלָּה praise (145), לְתוֹדָה thanksgiving (100), שִׁיר יְדִידֹת a love song (45), the sabbath (92); and הַלְלוּ יָהּ
-  in the text (praise, 15 psalms). The instruments a heading names (בִּנְגִינוֹת strings, הַנְּחִילוֹת flutes)
-  are added too.
+  תְּהִלָּה praise (145), לְתוֹדָה thanksgiving (100), שִׁיר יְדִידֹת a love song (45), the sabbath (92),
+  שִׁיר הַמַּעֲלוֹת a song of ascents (pilgrimage, 120–134); and הַלְלוּ יָהּ in the text (praise, 15 psalms).
+  The instruments a heading names (בִּנְגִינוֹת strings, הַנְּחִילוֹת flutes) are added too.
 - **A song in narrative**: the Masoretic song layout over most of a chapter in a book that is not song
-  (EXO 15, DEU 32, JDG 5, 2SA 22, 1CH 16).
+  (EXO 15, DEU 32, JDG 5, 2SA 22, 1CH 16). Lists in song layout (JOS 12, EST 9) are not songs.
+- **A psalm's type**, as the Tyndale Open Study Notes name it (passage-facts `fm.gn.*`, named by Hebrew
+  terms: `tefillah_tsarah` a prayer in distress → lament, `tehillah` → praise, `todah` → thanksgiving,
+  `mivtach` → trust, `chokhmah` → wisdom, `melekh` → royal …), where it covers at least half the psalm.
+  Where the notes name more than two types for one psalm (Ps 119: five), they give none.
+- **A psalm's purpose**, as Scriptura's Psalms: Layer by Layer states it (`fm.pu.*`, the same terms).
+- **What the classical Hebrew commentators call the psalm** (Radak, Meiri, Rashi, Ibn Ezra, Malbim,
+  Metzudat David), in their own words: תפלה prayer, שבח praise, הודאה thanksgiving (bcv-commons
+  `hebrew-commentary-terms`, by rule, and `-model`, read by a model). Each term is matched to a root in
+  `[commentary.roots]`; the mood most commentators agree on is taken.
 - **Delivery**: speech delivered one way (passage-facts `delivery`) covers at least 40% of the
   chapter: a lament (EZK 19, 27, 32), a prayer (1KI 8, NEH 9, JON 2), anger (MAT 23).
 
-The general heading terms (a psalm, a song, a maskil) and the grammar of a psalm were tested as cues and
-are not used: they do not tell a lament from praise reliably. Psalm types from scholarship (lament, trust,
-wisdom …) are proposed to bcv-commons, to be read here once published.
+With these, 135 of the 150 psalms have a mood (49 from the headings alone). The general heading terms
+(a psalm, a song, a maskil) and the grammar of a psalm were tested as cues and are not used: they do not
+tell a lament from praise reliably. A chapter whose mood comes from Tyndale, Scriptura or the
+commentators credits them in its notes file.
+
+**Moods inside a chapter.** Where the Hebrew/Greek words of most of a section mark a feeling, the
+section opens with a tag after its section label, such as `[Mood: anguished]`. The tag is written only
+where the feeling changes, and Suno sings the section in that mood within the chapter's style. The
+feelings are the 9 families of passage-facts, each named by a Hebrew head word: שָׂמַח joy, בָּכָה
+grief, יָרֵא fear and awe, אַף anger, בּוֹשׁ shame, בָּטַח trust, צָרָה distress, אָהֵב love, שָׂנֵא contempt.
+They come from passage-facts `mood` facts (by rule) and from `passage-moods-model` (read by a model).
+That gives tags in 337 of the 1,189 chapters. The notes file lists each section's mood and its
+source, marks model readings "model-read", and credits the datasets. The words of each tag are in
+`config/profiles.toml` (`[families]`, and `family_tag` for its form); `config/moods.toml`
+`[section_moods]` turns this on or off, or turns off the model's part only.
+
+**Model-made data.** Two inputs are a language model's readings with no human check:
+`hebrew-commentary-terms-model` and `passage-moods-model`. Every chapter that uses them says so in its
+notes file.
 
 `config/moods.toml` says which cue gives which mood. `config/profiles.toml` (`[moods]`,
 `[instruments]`, and per profile) says which words each mood adds; `""` turns a mood off.

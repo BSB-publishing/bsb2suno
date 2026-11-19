@@ -38,12 +38,14 @@ def credits(book: str, ed: str, al: align.Alignment) -> list[str]:
     return out
 
 
-def chapter_credits(book: str, chapter: int, ed: str, al: align.Alignment) -> list[str]:
+def chapter_credits(book: str, chapter: int, ed: str, al: align.Alignment,
+                    mood: moods.Mood | None = None, section_moods: list | None = None) -> list[str]:
+    out = credits(book, ed, al)
     if chapter in al.chapters_off:
-        return [c if not c.startswith("Alignment:") else
-                "Alignment: none for this chapter (the edition's text differs from the aligned text); "
-                "lines break at verse ends only." for c in credits(book, ed, al)]
-    return credits(book, ed, al)
+        out = [c if not c.startswith("Alignment:") else
+               "Alignment: none for this chapter (the edition's text differs from the aligned text); "
+               "lines break at verse ends only." for c in out]
+    return out + [f"Mood: {c}" for c in moods.source_credits(mood, section_moods)]
 
 
 def build_chapter(book: str, chapter: int, ed: str, bt: edition.BookText, al: align.Alignment,
@@ -71,6 +73,10 @@ def build_chapter(book: str, chapter: int, ed: str, bt: edition.BookText, al: al
     setting = ("song" if len(song) >= share * n else
                "poetry" if len(song | poetic) >= share * n else "prose")
     secs = render.sections(sts, setting, song | poetic, layout.get("chorus"))
+    sec_moods = moods.section_moods(book, [s.stanza.verses for s in secs], facts,
+                                    sorted({(r["chapter"], r["verse"]) for r in rows}), to_ed, profile)
+    for s, m in zip(secs, sec_moods):
+        s.mood = m
 
     notes = [f"Superscription before {c}:{v} (not sung): {t}" for (c, v), t in sorted(bt.titles.items()) if c == chapter]
     if layout.get("psalms", {}).get("heading_terms", True):
@@ -101,7 +107,7 @@ def build_chapter(book: str, chapter: int, ed: str, bt: edition.BookText, al: al
         style_note = "Style: given on the command line (--style)"
 
     notes_text, lyrics = render.render(bt.name, chapter, ed, setting, secs,
-                                 chapter_credits(book, chapter, ed, al), profile, style=args.style,
+                                 chapter_credits(book, chapter, ed, al, mood, sec_moods), profile, style=args.style,
                                  max_chars=args.max_chars, names=lambda sp: sp.label or cast.cast_name(sp.id),
                                  extra_notes=notes, layout=layout, letter_names=letter_names, style_note=style_note)
     data = {
@@ -116,6 +122,8 @@ def build_chapter(book: str, chapter: int, ed: str, bt: edition.BookText, al: al
         "pins": fetch.pins()["huggingface"], "bsb2suno": __version__,
         "sections": [{
             "label": s.label, "sung": s.sung,
+            "mood": ({"family": s.mood.family, "head": s.mood.head, "tag": s.mood.tag,
+                      "evidence": s.mood.evidence, "model": s.mood.model} if s.mood else None),
             "verses": [f"{c}:{v}" for c, v in s.stanza.verses],
             "lines": [{"verse": f"{ln.cv[0]}:{ln.cv[1]}", "token": ln.first_token, "text": ln.text,
                        "quote": ln.quote,

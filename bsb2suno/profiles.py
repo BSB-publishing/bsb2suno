@@ -19,6 +19,8 @@ class Profile:
     suffix: str = ""            # the edition's style_suffix
     moods: dict[str, str] | None = None         # mood -> words added for a chapter with that mood
     instruments: dict[str, str] | None = None   # instrument -> words added
+    families: dict[str, str] | None = None      # feeling family (md.*) -> words of its in-lyrics mood tag
+    family_tag: str = "[Mood: {words}]"         # how that tag is written
 
 
 def _merge(a: dict, b: dict) -> dict:
@@ -59,4 +61,6 @@ def for_book(edition: str, book: str, profile: str | None = None, lead: str | No
                    persona=(p.get("persona") or {}).get(lead) or None, tags=tags,
                    base_style=base, suffix=suffix,
                    moods=_merge(profs.get("moods", {}), p.get("moods", {})),
-                   instruments=_merge(profs.get("instruments", {}), p.get("instruments", {})))
+                   instruments=_merge(profs.get("instruments", {}), p.get("instruments", {})),
+                   families=_merge(profs.get("families", {}), p.get("families", {})),
+                   family_tag=p.get("family_tag", profs.get("family_tag", "[Mood: {words}]")))

@@ -23,7 +23,7 @@
  "mood": {
   "mood": "song",
   "basis": "song",
-  "evidence": "Masoretic song layout over 19 of 27 verses; speech delivered as praise over 18 of 27 verses",
+  "evidence": "Masoretic song layout over 19 of 27 verses; speech delivered as praise over 27 of 27 verses",
   "instruments": []
  },
  "text_fingerprint": "38a5c52ab47ca485bcc76e50d9a9b505d1f8e08f7b4fde6e4c2796098fcc80e4",
@@ -60,8 +60,8 @@
   },
   "passage-facts": {
    "repo": "bcv-commons/passage-facts",
-   "tag": "v0.2",
-   "revision": "6bb402053fc1f69472ac6a51524f06c39e2ffffb",
+   "tag": "v0.3.3",
+   "revision": "7e147a06b0cccf0b6e544912834a8da8f6d8ffbc",
    "licence": "CC BY-SA 4.0"
   },
   "full-alignments-manual": {
@@ -82,6 +82,24 @@
    "revision": "96d0a2295d1729c589ac6df67b56d0e88e4defe8",
    "licence": "CC0 1.0",
    "_use": "_fingerprints.txt: the aligned text's chapter fingerprints"
+  },
+  "passage-moods-model": {
+   "repo": "bcv-commons/passage-moods-model",
+   "tag": "v0.1",
+   "revision": "db4ad9173bee9371a983aa105fa1f647e9a6d24a",
+   "licence": "CC BY-SA 4.0 (model output, claude-opus-5-5, no human check)"
+  },
+  "hebrew-commentary-terms": {
+   "repo": "bcv-commons/hebrew-commentary-terms",
+   "tag": "v0.1",
+   "revision": "797e20cd29c97abaeceb7ba6bbd47272153ddc21",
+   "licence": "CC BY-SA 4.0"
+  },
+  "hebrew-commentary-terms-model": {
+   "repo": "bcv-commons/hebrew-commentary-terms-model",
+   "tag": "v0.1",
+   "revision": "965909b57f77b1001a6f3bf34c25231a93c63b3d",
+   "licence": "CC BY-SA 4.0 (model output, claude-opus-5-5, no human check)"
   }
  },
  "bsb2suno": "0.1.0",
@@ -89,6 +107,7 @@
   {
    "label": "Verse 1",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:1"
    ],
@@ -125,6 +144,7 @@
   {
    "label": "Chorus",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:1"
    ],
@@ -140,7 +160,7 @@
       "voice": "group"
      },
      "segment": 5,
-     "refrain": "EXO.02065#1",
+     "refrain": "EXO.02068#1",
      "acrostic": null,
      "selah": false
     },
@@ -155,7 +175,7 @@
       "voice": "group"
      },
      "segment": 6,
-     "refrain": "EXO.02065#1",
+     "refrain": "EXO.02068#1",
      "acrostic": null,
      "selah": false
     }
@@ -165,6 +185,7 @@
   {
    "label": "Verse 2",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:2",
     "15:3"
@@ -296,6 +317,7 @@
   {
    "label": "Verse 3",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:4",
     "15:5",
@@ -474,6 +496,7 @@
   {
    "label": "Verse 4",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:8",
     "15:9"
@@ -635,6 +658,7 @@
   {
    "label": "Verse 5",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:10",
     "15:11",
@@ -828,6 +852,7 @@
   {
    "label": "Verse 6",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:14",
     "15:15",
@@ -1005,6 +1030,7 @@
   {
    "label": "Verse 7",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:17",
     "15:18",
@@ -1185,6 +1211,7 @@
   {
    "label": "Verse 8",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:20",
     "15:21"
@@ -1244,6 +1271,7 @@
   {
    "label": "Chorus",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:21"
    ],
@@ -1259,7 +1287,7 @@
       "voice": "female"
      },
      "segment": 80,
-     "refrain": "EXO.02065#2",
+     "refrain": "EXO.02068#2",
      "acrostic": null,
      "selah": false
     },
@@ -1274,7 +1302,7 @@
       "voice": "female"
      },
      "segment": 81,
-     "refrain": "EXO.02065#2",
+     "refrain": "EXO.02068#2",
      "acrostic": null,
      "selah": false
     }
@@ -1284,6 +1312,7 @@
   {
    "label": "Verse 9",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:22",
     "15:23",
@@ -1421,6 +1450,7 @@
   {
    "label": "Verse 10",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:25"
    ],
@@ -1497,6 +1527,7 @@
   {
    "label": "Verse 11",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:26"
    ],
@@ -1638,6 +1669,7 @@
   {
    "label": "Verse 12",
    "sung": true,
+   "mood": null,
    "verses": [
     "15:27"
    ],

@@ -164,7 +164,26 @@ class TestMoods(unittest.TestCase):
         self.assertEqual(m[17].mood, "prayer")          # תְּפִלָּה
         self.assertEqual(m[150].mood, "praise")         # הַלְלוּ יָהּ
         self.assertEqual(m[4].instruments, ("strings",))
-        self.assertNotIn(23, m)                         # no cue: the book's style
+        self.assertEqual(m[121].mood, "pilgrimage")     # שִׁיר הַמַּעֲלוֹת
+        self.assertEqual((m[23].mood, m[23].basis), ("trust", "type"))   # Tyndale: mivtach
+        self.assertEqual(m[119].basis, "commentary")    # Tyndale names five types: none clearly; the commentators: prayer
+
+    def test_commentary_moods(self):
+        from bsb2suno import moods
+        self.assertEqual(moods.commentary_mood("וּמִתְפַּלֵּל", {"תפל": "prayer"}), "prayer")
+        m = self.moods_of("PSA")[51]
+        self.assertEqual((m.mood, m.basis), ("prayer", "commentary"))   # Meiri: לתפלה
+
+    def test_section_moods(self):
+        from bsb2suno import moods
+        prof = profiles.for_book("BSB", "PSA")
+        vmap = __import__("bsb2suno.align", fromlist=["x"]).verse_map("BSB")
+        to_ed = lambda cv: __import__("bsb2suno.align", fromlist=["x"]).spine_to_edition(vmap, "PSA", cv)
+        spine = sorted({(r["chapter"], r["verse"]) for r in structure.clause_lines("PSA", {22})})
+        sm = moods.section_moods("PSA", [[(22, v) for v in range(23, 26)], [(22, 1)]],
+                                 structure.passage_facts("PSA"), spine, to_ed, prof)
+        self.assertEqual(sm[0].family, "md.samach")                     # 22:23-25 praise in the assembly
+        self.assertEqual(sm[0].tag, "[Mood: joyful]")
 
     def test_song_in_narrative(self):
         self.assertEqual(self.moods_of("EXO")[15].mood, "song")
@@ -217,7 +236,8 @@ class TestPsalm(unittest.TestCase):
         self.assertEqual(bt.file_hash, "c867de4b")
         self.assertEqual(al.kind, "full")
         self.assertEqual(res["data"]["setting"], "poetry")
-        self.assertTrue(res["lyrics"].split("\n")[1].startswith("The LORD is my shepherd"))
+        sung = [ln for ln in res["lyrics"].split("\n") if ln and not ln.startswith("[")]
+        self.assertTrue(sung[0].startswith("The LORD is my shepherd"))
         self.assertIn("A Psalm of David.", res["notes"])   # in the comment block
 
 

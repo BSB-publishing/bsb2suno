@@ -27,6 +27,7 @@ class Section:
     sung: bool
     refrain: set[str] = field(default_factory=set)   # refrain ids sung inside the section (responsorial)
     kind: str = "start"      # why the section starts (see lines.Stanza.reason)
+    mood: object = None      # moods.SectionMood: a feeling the words of this section mark
 
 
 def _norm(s: str) -> str:
@@ -156,12 +157,17 @@ def render(book_name: str, chapter: int, edition_name: str, setting: str, secs: 
     body: list[str] = []
     cast_used: dict[str, list[str]] = {}
     cur_key, cur_tag = None, tags.get("narrator")
+    cur_mood = None
     for s in secs:
         if body:
             body.append("")
         head = section_tag(s.label, mode, numbered)
         if head:
             body.append(head)
+        mood_tag = s.mood.tag if s.mood else None
+        if mood_tag and mood_tag != cur_mood:      # a mood tag where the feeling changes
+            body.append(mood_tag)
+        cur_mood = mood_tag
         for ln in s.stanza.lines:
             is_refrain = ln.refrain is not None and ln.refrain in s.refrain
             if is_refrain:
@@ -196,7 +202,9 @@ def render(book_name: str, chapter: int, edition_name: str, setting: str, secs: 
     for s in secs:
         letters = [ln.acrostic for ln in s.stanza.lines if ln.acrostic]
         let = ("  · " + ", ".join(f"{x} {(letter_names or {}).get(x, '')}".strip() for x in letters)) if letters else ""
-        notes.append(f"[{s.label}] {_range(book_name, s.stanza.verses)}{let}")
+        md = (f"  · {s.mood.tag} {s.mood.family} {s.mood.head}, from {s.mood.evidence}"
+              + (" (model-read)" if s.mood.model else "")) if s.mood else ""
+        notes.append(f"[{s.label}] {_range(book_name, s.stanza.verses)}{let}{md}")
     notes.extend(extra_notes or [])
     notes.append("Shortened or paraphrased: nothing; every line is the edition's text, verbatim.")
     if len(lyrics) > max_chars:

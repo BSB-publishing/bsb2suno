@@ -4,7 +4,7 @@ Suno lyrics from the **Berean Standard Bible**. The lyric words are the BSB's ow
 lines break, who sings them, and whether the chapter is sung or told come from the Hebrew and Greek
 text, through bcv-commons data.
 
-See [`examples/`](examples/) for what it makes (RUT 1, PSA 23, PSA 136, EXO 15, LUK 1).
+See [`examples/`](examples/) for what it makes (RUT 1, PSA 22, PSA 23, PSA 136, EXO 15, LUK 1).
 
 ```
 make setup                           # once: install, download the pinned data, build the cast table

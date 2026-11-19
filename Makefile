@@ -1,5 +1,5 @@
 PY ?= python3
-EXAMPLES = RUT:1 PSA:23 PSA:136 EXO:15 LUK:1
+EXAMPLES = RUT:1 PSA:22 PSA:23 PSA:136 EXO:15 LUK:1
 
 .PHONY: help setup test examples cast cuts clean-output clean-cache
 

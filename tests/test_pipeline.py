@@ -206,7 +206,7 @@ class TestExamples(unittest.TestCase):
         from bsb2suno.__main__ import main
         ex = ROOT / "examples"
         with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
-            for b, c in (("RUT", 1), ("PSA", 23), ("PSA", 136), ("EXO", 15), ("LUK", 1)):
+            for b, c in (("RUT", 1), ("PSA", 22), ("PSA", 23), ("PSA", 136), ("EXO", 15), ("LUK", 1)):
                 main([b, str(c), "--out", tmp, "--bare"])
             got = {p.relative_to(tmp): p.read_bytes() for p in Path(tmp).rglob("*") if p.is_file()}
         want = {p.relative_to(ex): p.read_bytes() for p in ex.rglob("*") if p.is_file()}
